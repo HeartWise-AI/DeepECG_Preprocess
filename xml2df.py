@@ -84,4 +84,4 @@ class BuildDfFromDict(dict):
         if save is True:
             df_.to_csv(os.path.join(save_dir,"{}.csv".format(file_name)))
     
-        return pd.DataFrame(xml_dict_list)
+        return df_
