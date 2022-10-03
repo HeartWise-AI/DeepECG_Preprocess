@@ -74,7 +74,9 @@ class BuildDfFromDict():
             xml_dict_list.append(self.flatten(dict_from_xml))
 
     
-    
-        df_ = self.clean(pd.DataFrame(xml_dict_list))
+        df_ = self.clean_dict(pd.DataFrame(xml_dict_list))
+
+        if save is True:
+            df_.to_csv(os.path.join(save_dir,"{}.csv".format(file_name)))
 
         return df_
