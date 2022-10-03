@@ -8,14 +8,9 @@ from itertools import chain
 from operator import methodcaller
 from datetime import datetime
 import pandas as pd
-from pandas.io.json._normalize import nested_to_record    
 from collections.abc import MutableMapping
-from copy import copy
-import json
 from lxml import objectify as xml_objectify
-from functools import reduce
 from xml.etree import cElementTree as ET
-from unittest.util import strclass
 
 #How to use
 # df = BuildDfFromDict('/media/data1/muse_ge/ecg_retrospective').build_the_df()
@@ -78,9 +73,15 @@ class BuildDfFromDict(dict):
             dict_from_xml = self.xml_to_dict(xmlstr)
             xml_dict_list.append(self.flatten(dict_from_xml))
 
-
+        
+        print("Generating the final dataframe")
         for pos,dict in enumerate(xml_dict_list):
             for k,v in dict.items():
                 xml_dict_list[pos][k] = v.text
+                
+         df_ = pd.DataFrame(xml_dict_list)
+        
+        if save is True:
+            df_.to_csv(os.path.join(save_dir,"{}.csv".format(file_name)))
     
         return pd.DataFrame(xml_dict_list)
