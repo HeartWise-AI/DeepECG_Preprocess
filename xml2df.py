@@ -47,15 +47,6 @@ class BuildDfFromDict():
                 items.append((new_key, v))
         return dict(items)
 
-    def clean(self,list_:str):
-        list_.replace('[','')
-        list_.replace(']','')
-        return list_
-
-    def clean_dict(self,df:pd.DataFrame):
-        for col in tqdm(df.columns):
-            df[col] = df[col].apply(self.clean)
-        return df
 
     def build_the_df(self, save: bool=True, save_dir: str='/volume', file_name: str="xml_data", loading_bar: bool=True):
 
@@ -74,7 +65,12 @@ class BuildDfFromDict():
             xml_dict_list.append(self.flatten(dict_from_xml))
 
     
-        df_ = self.clean_dict(pd.DataFrame(xml_dict_list))
+        for pos,d_ in enumerate(xml_dict_list):
+            for k,v in d_.items():
+                if type(v) != str and v != None:
+                    xml_dict_list[pos][k] = v.text
+                    
+        df_ = pd.DataFrame(xml_dict_list)
 
         if save == True:
             df_.to_csv(os.path.join(save_dir,"{}.csv".format(file_name)))
