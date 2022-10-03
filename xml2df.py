@@ -16,7 +16,7 @@ from xml.etree import cElementTree as ET
 # df = BuildDfFromDict('/media/data1/muse_ge/ecg_retrospective').build_the_df()
 
 
-class BuildDfFromDict(dict):
+class BuildDfFromDict:
     """
     directory = "/media/data1/muse_ge/ecg_retrospective"
 
