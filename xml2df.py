@@ -16,7 +16,7 @@ from xml.etree import cElementTree as ET
 # df = BuildDfFromDict('/media/data1/muse_ge/ecg_retrospective').build_the_df()
 
 
-class BuildDfFromDict:
+class BuildDfFromDict():
     """
     directory = "/media/data1/muse_ge/ecg_retrospective"
 
@@ -54,7 +54,7 @@ class BuildDfFromDict:
 
     def clean_dict(self,df:pd.DataFrame):
         for col in tqdm(df.columns):
-            df[col] = df[col].apply(clean)
+            df[col] = df[col].apply(self.clean)
         return df
 
     def build_the_df(self, save: bool=True, save_dir: str='/volume', file_name: str="xml_data", loading_bar: bool=True):
@@ -73,15 +73,8 @@ class BuildDfFromDict:
             dict_from_xml = self.xml_to_dict(xmlstr)
             xml_dict_list.append(self.flatten(dict_from_xml))
 
-        
-        print("Generating the final dataframe")
-        for pos,dict in enumerate(xml_dict_list):
-            for k,v in dict.items():
-                xml_dict_list[pos][k] = v.text
-                
-         df_ = pd.DataFrame(xml_dict_list)
-        
-        if save is True:
-            df_.to_csv(os.path.join(save_dir,"{}.csv".format(file_name)))
     
+    
+        df_ = self.clean(pd.DataFrame(xml_dict_list))
+
         return df_
