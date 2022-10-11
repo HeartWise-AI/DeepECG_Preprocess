@@ -42,7 +42,6 @@ class tinyxml2df():
         #iterate through all the files name verbose or not
         print("{} | Currently transforming {} xml files from dir {} into dict".format(datetime.now().strftime("%H:%M:%S"),len(files_with_xml),self.path))
         for pos,file_xml in enumerate(tqdm(files_with_xml) if verbose else files_with_xml): 
-            print(file_xml)
             with open(os.path.join(self.path,file_xml), 'r') as xml:
                 #load
                 ECG_data_nested = xmltodict.parse(xml.read())
