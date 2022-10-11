@@ -35,9 +35,9 @@ class tinyxml2df():
         df["Original_Diag"] = df["Original_Diag"].str.replace(r'ENDSLINE', '')
         return df
 
-    def read2flatten(self, verbose: bool=True, output: str=os.getcwd):
+    def read2flatten(self, verbose: bool=True, output_dir: str=os.getcwd, save: bool=False):
         xml_dict_list = list()
-        files_with_xml = [_ for _ in os.listdir(self.path) if _.endswith('.xml')][1000:1010]
+        files_with_xml = [_ for _ in os.listdir(self.path) if _.endswith('.xml')]
 
         #iterate through all the files name verbose or not
         print("{} | Currently transforming {} xml files from dir {} into dict".format(datetime.now().strftime("%H:%M:%S"),len(files_with_xml),self.path))
@@ -51,4 +51,7 @@ class tinyxml2df():
                 #append to the list
                 xml_dict_list.append(ECG_data_flatten.copy())
 
-        return self.fusediagcols(pd.DataFrame(xml_dict_list))
+        df = self.fusediagcols(pd.DataFrame(xml_dict_list))
+        if save == True:
+            df.to_csv(os.path.join(output_dir, "df_xml.csv"))
+        return df
