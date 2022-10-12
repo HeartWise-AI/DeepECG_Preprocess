@@ -56,9 +56,10 @@ class TinyGetWaveform():
 
             #create a patient-specific direcotry to save
             #wveform and label vectors
-
+            list_numpy_paths = list()
             for xml in  self.data['xml_path'].values:
                 try:
+                    list_numpy_paths.append(os.path.join(self.save_path, "numpy_ecg",xml.split('/')[-1].split('.xml')[0]))
                     os.mkdir(os.path.join(self.save_path, "numpy_ecg",xml.split('/')[-1].split('.xml')[0]))
                 except:
                     pass
@@ -93,4 +94,6 @@ class TinyGetWaveform():
                         np.savez_compressed(os.path.join(loc,"Diagnosis.npz"), entry)
                     else:
                         np.save(os.path.join(loc,"Diagnosis.npy"), entry)
+
+                self.data['numpy_path'] = list_numpy_paths
         return self.data
