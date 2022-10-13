@@ -32,8 +32,25 @@ class tinyxml2df():
             df["Diag"]= df["Diag"].str.cat(df[col].fillna('').copy(), sep =" ")
         
         df["Diag"] = df["Diag"].str.replace(r'ENDSLINE', '')
+        df["Diag"] = df["Diag"].str.replace(r'USERINSERT', '')
+
         df["Original_Diag"] = df["Original_Diag"].str.replace(r'ENDSLINE', '')
+        df["Original_Diag"] = df["Original_Diag"].str.replace(r'USERINSERT', '')
+
         return df
+
+    def check_abnoramlity(self, data:pd.DataFrame):
+        warn = ["Analyse impossible", "ECG anormal"]
+        list_abnormality = [0] * data.shape[0]
+        for pos,entry in enumerate(data['Original_Diag'].values):
+            if any(x in entry for x in warn):
+                list_abnormality[pos] = -1
+
+        for pos,entry in enumerate(data['Diag'].values):
+            if any(x in entry for x in warn):
+                list_abnormality[pos] = -1       
+        data['path_to_xml'] = list_abnormality
+        return data
 
     def read2flatten(self, verbose: bool=True, output_dir: str='/media/data1/anolin/ECG', save: bool=True):
         xml_dict_list = list()
@@ -53,7 +70,8 @@ class tinyxml2df():
                 xml_dict_list.append(ECG_data_flatten.copy())
 
         df = self.fusediagcols(pd.DataFrame(xml_dict_list))
-        df['path_to_xml'] = path_list
+        df = self.check_abnoramlity(df)
+        
         if save == True:
             df.to_csv(os.path.join(output_dir, "df_xml.csv"))
         return df
