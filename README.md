@@ -6,4 +6,4 @@ Class that takes in a path of xml and transforms all the xml into a dict without
 
 To run:
 
-`df = tinyxml2df("path_to_xml").read2flatten(verbose=True, output_dir=os.getcwd, save=False)`
+`df = tinyxml2df("path_to_xml").read2flatten(verbose=True, output_dir=os.getcwd(), save=False)`
