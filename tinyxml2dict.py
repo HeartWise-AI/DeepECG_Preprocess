@@ -49,7 +49,7 @@ class tinyxml2df():
         for pos,entry in enumerate(data['Diag'].values):
             if any(x in entry for x in warn):
                 list_abnormality[pos] = -1       
-        data['path_to_xml'] = list_abnormality
+        data['warnings'] = list_abnormality
         return data
 
     def read2flatten(self, verbose: bool=True, output_dir: str='/media/data1/anolin/ECG', save: bool=True):
