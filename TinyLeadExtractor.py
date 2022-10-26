@@ -12,15 +12,19 @@ class TinyGetWaveform():
     def generate_dataset(self):  
 
         def transform_raw_lead(lead_data):
-            if lead_data != np.nan:
-                lead_b64 = base64.b64decode(lead_data)
-                return np.array(array.array("h", lead_b64))
+            if pd.isna(lead_data) == False:
+                try:
+                    lead_b64 = base64.b64decode(lead_data)
+                    return np.array(array.array("h", lead_b64))
+                except:
+                    raise ValueError(pd.isna(lead_data))
+                    
             else:
                 return lead_data
 
         def longitudinal_substract(array_of_array_1:np.array,array_of_array_2:np.array, mult=0):
             if array_of_array_1 != np.nan and array_of_array_2 != np.nan:
-                return [np.substract(array_of_array_1[i],mult*array_of_array_2[i]) for i in range(len(array_of_array_1))]
+                return [np.subtract(array_of_array_1[i],mult*array_of_array_2[i]) for i in range(len(array_of_array_1))]
             else:
                 return np.nan
 
@@ -38,18 +42,15 @@ class TinyGetWaveform():
                     lead_id= self.data["{}_LeadData_{}_LeadID".format(wave,entry)].dropna().values[0]
                     self.data['Lead_Wavform_{}_ID_{}'.format(wave[-1],lead_id)] = self.data[lead_col_name].map(transform_raw_lead)
         
-            self.data['Lead_Wavform_{}_ID_III'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_0_ID_I'].values,self.data['Lead_Wavform_0_ID_II'].values)
-            self.data['Lead_Wavform_{}_ID_aVR'.format(wave[-1])] = longitudinal_add(self.data['Lead_Wavform_0_ID_I'].values,self.data['Lead_Wavform_0_ID_II'].values)
-            self.data['Lead_Wavform_{}_ID_aVL'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_0_ID_I'].values,self.data['Lead_Wavform_0_ID_II'].values, mult=0.5)
-            self.data['Lead_Wavform_{}_ID_aVF'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_0_ID_II'].values,self.data['Lead_Wavform_0_ID_I'].values, mult=0.5)
-
+                self.data['Lead_Wavform_{}_ID_III'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values)
+                self.data['Lead_Wavform_{}_ID_aVR'.format(wave[-1])] = longitudinal_add(self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values)
+                self.data['Lead_Wavform_{}_ID_aVL'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values, mult=0.5)
+                self.data['Lead_Wavform_{}_ID_aVF'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values, mult=0.5)
+        """
         if self.save_npy == True:
-
             #create main dir
-
             try:
                 os.mkdir(os.path.join(self.save_path, "numpy_ecg"))
-
             except:
                 print("{} already exists".format(os.path.join(self.save_path, "numpy_ecg")))
 
@@ -96,4 +97,5 @@ class TinyGetWaveform():
                         np.save(os.path.join(loc,"Diagnosis.npy"), entry)
 
                 self.data['numpy_path'] = list_numpy_paths
+            """
         return self.data
