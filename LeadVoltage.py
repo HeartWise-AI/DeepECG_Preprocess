@@ -22,19 +22,27 @@ class GetWaveform():
         self.RestingECG_Waveform_0 = self.GetLeads1
         self.RestingECG_Waveform_1 = self.GetLeads2
 
-        self.lead_data_pairs = dict()
+        self.lead_data_pairs = {}
         for wave in ['RestingECG_Waveform_0','RestingECG_Waveform_1']:
-            temp_dict = dict()
+            temp_dict = {}
             for entry in range(1,13):
                 try:
                     col_name = "{}_LeadData_{}_WaveFormData".format(wave,entry)
-                    temp_dict.update({self.data[col_name].values[0]:tuple(zip(self.data[col_name].map(transform_raw_lead).values(),\
-                        self.data['Original_Diag'].map(transform_raw_lead).values(),self.data['Diag'].map(transform_raw_lead).values()))})
+                    temp_dict[self.data[col_name].values[0]] = tuple(
+                        zip(
+                            self.data[col_name].map(transform_raw_lead).values(),
+                            self.data['Original_Diag']
+                            .map(transform_raw_lead)
+                            .values(),
+                            self.data['Diag'].map(transform_raw_lead).values(),
+                        )
+                    )
+
                 except:
                     pass
             self.lead_data_pairs.update({wave:temp_dict})
 
-        if modify_df == True:
+        if modify_df:
             for old_col in [col_lead for col_lead in self.data.columns.tolist() if re.match(re.compile('RestingECG_Waveform_._LeadData_.WaveFormData'),col_lead)]:
                 self.data['{}_Transformed'.format(old_col)] = self.data[old_col].map(transform_raw_lead)
 

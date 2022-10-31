@@ -53,13 +53,16 @@ class tinyxml2df():
         return data
 
     def read2flatten(self, verbose: bool=True, output_dir: str='/media/data1/anolin/ECG', save: bool=True):
-        xml_dict_list = list()
-        path_list = list()
+        xml_dict_list = []
+        path_list = []
         files_with_xml = [_ for _ in os.listdir(self.path) if _.endswith('.xml')]
 
         #iterate through all the files name verbose or not
-        print("{} | Currently transforming {} xml files from dir {} into dict".format(datetime.now().strftime("%H:%M:%S"),len(files_with_xml),self.path))
-        for pos,file_xml in enumerate(tqdm(files_with_xml) if verbose else files_with_xml): 
+        print(
+            f'{datetime.now().strftime("%H:%M:%S")} | Currently transforming {len(files_with_xml)} xml files from dir {self.path} into dict'
+        )
+
+        for file_xml in tqdm(files_with_xml) if verbose else files_with_xml:
             with open(os.path.join(self.path,file_xml), 'r') as xml:
                 path_list.append(os.path.join(self.path,file_xml))
                 #load
@@ -71,7 +74,7 @@ class tinyxml2df():
 
         df = self.fusediagcols(pd.DataFrame(xml_dict_list))
         df = self.check_abnoramlity(df)
-        
-        if save == True:
+
+        if save:
             df.to_csv(os.path.join(output_dir, "df_xml.csv"))
         return df

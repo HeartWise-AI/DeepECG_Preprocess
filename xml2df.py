@@ -51,11 +51,14 @@ class BuildDfFromDict():
     def build_the_df(self, save: bool=True, save_dir: str='/volume', file_name: str="xml_data", loading_bar: bool=True):
 
         #taking in the flatten dir and using it as a dataframe
-        xml_dict_list = list()
+        xml_dict_list = []
         files_with_xml = [_ for _ in os.listdir(self.dir) if _.endswith('.xml')]
 
         #iterate through all the files name verbose or not
-        print("{} | Currently transforming {} xml files from dir {} into dict".format(datetime.now().strftime("%H:%M:%S"),len(files_with_xml),self.dir))
+        print(
+            f'{datetime.now().strftime("%H:%M:%S")} | Currently transforming {len(files_with_xml)} xml files from dir {self.dir} into dict'
+        )
+
         for file_xml in (tqdm(files_with_xml) if loading_bar else files_with_xml): 
             file_xml = os.path.join(self.dir,file_xml)
             tree = ET.parse(file_xml)
@@ -64,15 +67,15 @@ class BuildDfFromDict():
             dict_from_xml = self.xml_to_dict(xmlstr)
             xml_dict_list.append(self.flatten(dict_from_xml))
 
-    
+
         for pos,d_ in enumerate(xml_dict_list):
             for k,v in d_.items():
                 if type(v) != str and v != None:
                     xml_dict_list[pos][k] = v.text
-                    
+
         df_ = pd.DataFrame(xml_dict_list)
 
-        if save == True:
-            df_.to_csv(os.path.join(save_dir,"{}.csv".format(file_name)))
+        if save:
+            df_.to_csv(os.path.join(save_dir, f"{file_name}.csv"))
 
         return df_
