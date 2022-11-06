@@ -1,3 +1,6 @@
+from pylab import rcParams
+import re
+
 rcParams['figure.figsize'] = 30, 30
 rcParams['xtick.bottom'] = rcParams['xtick.labelbottom'] = False
 rcParams['ytick.left'] = rcParams['ytick.labelleft'] = False
@@ -28,14 +31,15 @@ def plot_a_lead(row_num=100):
 
     #generate the pannels
 
-    pannel_1_y = activation + lead_dict['I'][0:600] + lead_dict['aVR'][0:600] + lead_dict['V1'][0:600] + lead_dict['V4'][0:600]
-    pannel_2_y = activation + lead_dict['II'][0:600] + lead_dict['aVL'][0:600] + lead_dict['V2'][0:600] + lead_dict['V5'][0:600]
-    pannel_3_y = activation + lead_dict['III'][0:600] + lead_dict['aVF'][0:600] + lead_dict['V3'][0:600] + lead_dict['V6'][0:600]
+    pannel_1_y = activation + lead_dict['I'][0:625] + lead_dict['aVR'][0:625] + lead_dict['V1'][0:625] + lead_dict['V4'][0:625]
+    pannel_2_y = activation + lead_dict['II'][0:625] + lead_dict['aVL'][0:625] + lead_dict['V2'][0:625] + lead_dict['V5'][0:625]
+    pannel_3_y = activation + lead_dict['III'][0:625] + lead_dict['aVF'][0:625] + lead_dict['V3'][0:625] + lead_dict['V6'][0:625]
+    pannel_4_y = activation + lead_dict['II']
 
-    minor_ticks = np.arange(0, 2460, 10)
-    major_ticks = np.arange(0, 2460, 50)
+    minor_ticks = np.arange(0, 2560, 10)
+    major_ticks = np.arange(0, 2560, 50)
 
-    fig, (ax1, ax2, ax3) = plt.subplots(3)
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)
 
     x = [pos for pos in range(0, len(pannel_1_y))]
     ax1.plot(x,pannel_1_y,linewidth=0.7, color='#000000')
@@ -130,6 +134,27 @@ def plot_a_lead(row_num=100):
 
     ax3.set_yticks(major_ticks_y)
     ax3.set_yticks(minor_ticks_y, minor=True)
+
+    ax4.plot(x,pannel_4_y,linewidth=.7,color='#000000')
+
+    ax4.set_xticks(major_ticks)
+    ax4.set_xticks(minor_ticks, minor=True)
+
+    # And a corresponding grid
+    ax4.grid(which='both')
+
+    # Or if you want different settings for the grids:
+    ax4.grid(which='minor', color='#515151', linestyle=':')
+    ax4.grid(which='major', color='#000000', linestyle='--')
+
+    ax4.vlines(60,50,-50, label='II')
+    ax4.text(60, 55, 'II', fontsize=22)
+
+    minor_ticks_y = np.arange(4.88*round(min(pannel_4_y)/4.88), 4.88*round(max(pannel_4_y)/4.88), 1*4.88)
+    major_ticks_y = np.arange(4.88*round(min(pannel_4_y)/4.88), 4.88*round(max(pannel_4_y)/4.88), 5*4.88)
+
+    ax4.set_yticks(major_ticks_y)
+    ax4.set_yticks(minor_ticks_y, minor=True)
 
     fig.suptitle(re.sub("\s\s+" , " ",data_set["Diag"].iloc[row_num].replace("ECG anormal","")), fontsize=15)
     #add grid
