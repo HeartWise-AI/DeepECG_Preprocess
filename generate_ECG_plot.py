@@ -14,6 +14,7 @@ def plot_a_lead(row_num=100):
     pannel_1_y = list()
     pannel_2_y = list()
     pannel_3_t = list()
+    pannel_4_t = list()
 
     lead_dict = dict(zip(lead_id_list,[[] for i in range(len(lead_id_list))]))
 
@@ -36,8 +37,8 @@ def plot_a_lead(row_num=100):
     pannel_3_y = activation + lead_dict['III'][0:625] + lead_dict['aVF'][0:625] + lead_dict['V3'][0:625] + lead_dict['V6'][0:625]
     pannel_4_y = activation + lead_dict['II']
 
-    minor_ticks = np.arange(0, 2560, 10)
-    major_ticks = np.arange(0, 2560, 50)
+    minor_ticks = np.arange(0, 2500, 10)
+    major_ticks = np.arange(0, 2500, 50)
 
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(4)
 
@@ -64,14 +65,14 @@ def plot_a_lead(row_num=100):
     ax1.vlines(60,50,-50, label='I')
     ax1.text(60, 55, 'I', fontsize=22)
 
-    ax1.vlines(660,50,-50, label='aVR')
-    ax1.text(660, 55, 'aVR', fontsize=22)
+    ax1.vlines(685,50,-50, label='aVR')
+    ax1.text(685, 55, 'aVR', fontsize=22)
 
-    ax1.vlines(1260,50,-50, label='V1')
-    ax1.text(1260, 55, 'V1', fontsize=22)
+    ax1.vlines(1285,50,-50, label='V1')
+    ax1.text(1285, 55, 'V1', fontsize=22)
 
-    ax1.vlines(1860,50,-50, label='V4')
-    ax1.text(1860, 55, 'V4', fontsize=22)
+    ax1.vlines(1885,50,-50, label='V4')
+    ax1.text(1885, 55, 'V4', fontsize=22)
 
     ax2.plot(x,pannel_2_y, linewidth=.7,color='#000000')
 
@@ -150,15 +151,9 @@ def plot_a_lead(row_num=100):
     ax4.vlines(60,50,-50, label='II')
     ax4.text(60, 55, 'II', fontsize=22)
 
-    minor_ticks_y = np.arange(4.88*round(min(pannel_4_y)/4.88), 4.88*round(max(pannel_4_y)/4.88), 1*4.88)
-    major_ticks_y = np.arange(4.88*round(min(pannel_4_y)/4.88), 4.88*round(max(pannel_4_y)/4.88), 5*4.88)
-
-    ax4.set_yticks(major_ticks_y)
-    ax4.set_yticks(minor_ticks_y, minor=True)
-
-    fig.suptitle(re.sub("\s\s+" , " ",data_set["Diag"].iloc[row_num].replace("ECG anormal","")), fontsize=15)
+    fig.suptitle(re.sub("\s\s+" , " ",data_set["Diag"].iloc[row_num].replace("ECG anormal","")), fontsize=15,pad=20)
     #add grid
-    plt.tight_layout()
+    #plt.tight_layout()
 
     # shift subplots down:
     plt.subplots_adjust(wspace=0, hspace=0)
