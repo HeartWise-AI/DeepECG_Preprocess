@@ -34,68 +34,16 @@ class TinyGetWaveform():
             else:
                 return np.nan
 
-        #conventional boyz
         for wave in ['RestingECG_Waveform_0','RestingECG_Waveform_1']:
             for entry in range(0,13):
                 lead_col_name = "{}_LeadData_{}_WaveFormData".format(wave,entry)
                 if lead_col_name in self.data.columns:
-                    lead_id= self.data["{}_LeadData_{}_LeadID".format(wave,entry)].dropna().values[0]
+                    lead_id = self.data["{}_LeadData_{}_LeadID".format(wave,entry)].dropna().values[0]
                     self.data['Lead_Wavform_{}_ID_{}'.format(wave[-1],lead_id)] = self.data[lead_col_name].map(transform_raw_lead)
-        
-                self.data['Lead_Wavform_{}_ID_III'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values)
-                self.data['Lead_Wavform_{}_ID_aVR'.format(wave[-1])] = longitudinal_add(self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values)
-                self.data['Lead_Wavform_{}_ID_aVL'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values, mult=0.5)
-                self.data['Lead_Wavform_{}_ID_aVF'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values, mult=0.5)
-        """
-        if self.save_npy == True:
-            #create main dir
-            try:
-                os.mkdir(os.path.join(self.save_path, "numpy_ecg"))
-            except:
-                print("{} already exists".format(os.path.join(self.save_path, "numpy_ecg")))
 
-
-            #create a patient-specific direcotry to save
-            #wveform and label vectors
-            list_numpy_paths = list()
-            for xml in  self.data['xml_path'].values:
-                try:
-                    list_numpy_paths.append(os.path.join(self.save_path, "numpy_ecg",xml.split('/')[-1].split('.xml')[0]))
-                    os.mkdir(os.path.join(self.save_path, "numpy_ecg",xml.split('/')[-1].split('.xml')[0]))
-                except:
-                    pass
-           
-
-            for col in self.data.columns:
-                #save lead data
-                if 'Lead_Wavform_' in col:
-                    for pos,patient_info_entry in self.data[col].values:
-                        loc = os.path.join(self.save_path, "numpy_ecg",self.data['xml_path'].iloc[pos].split('/')[-1].split('.xml')[0])
-                        #I offer to compress
-                        if self.compressed == True:
-                            np.savez_compressed(os.path.join(loc,"{}.npz".format(col)), patient_info_entry)
-                        else:
-                            np.save(os.path.join(loc,"{}.npy".format(col)), patient_info_entry)        
-                
-                #save label vectors
-                #diag
-                for pos, entry in self.data['Original_Diag'].values:
-                    loc = os.path.join(self.save_path, "numpy_ecg",self.data['xml_path'].iloc[pos].split('/')[-1].split('.xml')[0])
-
-                    if self.compressed == True:
-                        np.savez_compressed(os.path.join(loc,"Original_Diagnosis.npz"), entry)
-                    else:
-                        np.save(os.path.join(loc,"Original_Diagnosis.npy"), entry)
-
-                #original_diag
-                for pos, entry in self.data['Diag'].values:
-                    loc = os.path.join(self.save_path, "numpy_ecg",self.data['xml_path'].iloc[pos].split('/')[-1].split('.xml')[0])
-
-                    if self.compressed == True:
-                        np.savez_compressed(os.path.join(loc,"Diagnosis.npz"), entry)
-                    else:
-                        np.save(os.path.join(loc,"Diagnosis.npy"), entry)
-
-                self.data['numpy_path'] = list_numpy_paths
-            """
+            self.data['Lead_Wavform_{}_ID_III'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values)
+            self.data['Lead_Wavform_{}_ID_aVR'.format(wave[-1])] = longitudinal_add(self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values)
+            self.data['Lead_Wavform_{}_ID_aVL'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values, mult=0.5)
+            self.data['Lead_Wavform_{}_ID_aVF'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values, mult=0.5)
+    
         return self.data
