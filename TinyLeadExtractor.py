@@ -45,5 +45,19 @@ class TinyGetWaveform():
             self.data['Lead_Wavform_{}_ID_aVR'.format(wave[-1])] = longitudinal_add(self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values)
             self.data['Lead_Wavform_{}_ID_aVL'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values, mult=0.5)
             self.data['Lead_Wavform_{}_ID_aVF'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values, mult=0.5)
-    
+
+        for i in [0,1]:
+            self.data['Lead_Wavform_{}_ID_I'.format(i)]  = self.data['Lead_Wavform_{}_ID_I'.format(i)].apply(lambda x: [int(i*4.88) for i in x])
+            self.data['Lead_Wavform_{}_ID_II'.format(i)]  = self.data['Lead_Wavform_{}_ID_II'.format(i)].apply(lambda x: [int(i*4.88) for i in x])
+            self.data['Lead_Wavform_{}_ID_III'.format(i)]  = self.data['Lead_Wavform_{}_ID_III'.format(i)].apply(lambda x: [int(i*4.88) for i in x])
+            self.data['Lead_Wavform_{}_ID_V1'.format(i)]  = self.data['Lead_Wavform_{}_ID_V1'.format(i)].apply(lambda x: [int(i*4.88) for i in x])
+            self.data['Lead_Wavform_{}_ID_V2'.format(i)]  = self.data['Lead_Wavform_{}_ID_V2'.format(i)].apply(lambda x: [int(i*4.88) for i in x])
+            self.data['Lead_Wavform_{}_ID_V3'.format(i)]  = self.data['Lead_Wavform_{}_ID_V3'.format(i)].apply(lambda x: [int(i*4.88) for i in x])
+            self.data['Lead_Wavform_{}_ID_V4'.format(i)]  = self.data['Lead_Wavform_{}_ID_V4'.format(i)].apply(lambda x: [int(i*4.88) for i in x])
+            self.data['Lead_Wavform_{}_ID_V5'.format(i)]  = self.data['Lead_Wavform_{}_ID_V5'.format(i)].apply(lambda x: [int(i*4.88) for i in x])
+            self.data['Lead_Wavform_{}_ID_V6'.format(i)]  = self.data['Lead_Wavform_{}_ID_V6'.format(i)].apply(lambda x: [int(i*4.88) for i in x])
+            self.data['Lead_Wavform_{}_ID_aVL'.format(i)]  = self.data['Lead_Wavform_{}_ID_aVL'.format(i)].apply(lambda x: [int(i*4.88) for i in x])
+            self.data['Lead_Wavform_{}_ID_aVR'.format(i)]  = self.data['Lead_Wavform_{}_ID_aVR'.format(i)].apply(lambda x: [int(i*4.88) for i in x])
+            self.data['Lead_Wavform_{}_ID_aVF'.format(i)]  = self.data['Lead_Wavform_{}_ID_aVF'.format(i)].apply(lambda x: [int(i*4.88) for i in x])
+
         return self.data
