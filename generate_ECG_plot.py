@@ -103,15 +103,15 @@ def plot_a_lead(row_num=200):
     def replace_str_index(text,index=0,replacement=''):
         return '%s%s%s'%(text[:index],replacement,text[index+1:])
 
-    def title_reshape(str):
-        if len(str) > 100:
-           num_patritions = round(len(str)/75)
+    def title_reshape(string):
+        if len(string) > 150:
+           num_patritions = round(len(string)/130)
            for i in range(1,num_patritions+1):
-                for pos, entry in enumerate(list(str[75*i::])):
+                for pos, entry in enumerate(list(string[130*i::])):
                     if entry == ' ':
-                        replace_str_index(str,pos+(75*i),'\n')
+                        string = replace_str_index(string,pos + (130*i), '\n')
                         break
-
+        return string
 
     ax.set_title(title_reshape(re.sub("\s\s+" , " ",data_set["Diag"].iloc[row_num].replace("ECG anormal","").replace(";","\t"))), fontsize=20, y=0.96,  backgroundcolor='white')
     #plt.subplots_adjust(top=0.85)
@@ -119,5 +119,9 @@ def plot_a_lead(row_num=200):
     #add grid
     plt.tight_layout()
 
-    #plt.savefig("/volume/validation_{}_{}_{}.jpg".format(data_set['RestingECG_PatientDemographics_PatientID'].iloc[row_num],data_set['RestingECG_TestDemographics_AcquisitionDate'].iloc[row_num], row_num))
-plot_a_lead(row_num=49742)
+    plt.savefig("/volume/image_3360/{}_{}_{}.jpg".format(data_set['RestingECG_PatientDemographics_PatientID'].iloc[row_num],data_set['RestingECG_TestDemographics_AcquisitionDate'].iloc[row_num], row_num))
+    
+plot_a_lead(row_num=0)
+
+for i in data_set.index.tolist():
+    plot_a_lead(i)
