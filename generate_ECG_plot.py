@@ -41,7 +41,7 @@ def plot_a_lead(row_num=200):
     pannel_3_y = [i - 15 for i in activation] + [((i*4.88)/100) - 15 for i in lead_dict['III'][60:625]] + [((i*4.88)/100) - 15 for i in lead_dict['aVF'][0:625]] + [((i*4.88)/100) - 15 for i in lead_dict['V3'][0:625]] + [((i*4.88)/100) - 15 for i in lead_dict['V6'][0:625]]
     pannel_4_y = [i - 50 for i in activation] + [((i*4.88)/100) - 50 for i in lead_dict['II'][60::]]
 
-    fig, ax = plt.subplots(figsize=(40, 40))
+    fig, ax = plt.subplots(figsize=(40, 20))
     ax.minorticks_on()
  
     ax.vlines(60,-10,-20, label='III', linewidth=4)
@@ -83,14 +83,14 @@ def plot_a_lead(row_num=200):
     ax.vlines(60,-55,-45, label='II', linewidth=4)
     ax.text(60, -45, 'II', fontsize=44)
 
-    ax.xaxis.set_major_locator(ticker.MultipleLocator(125))
-    ax.xaxis.set_minor_locator(ticker.MultipleLocator(25))
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(50))
+    ax.xaxis.set_minor_locator(ticker.MultipleLocator(10))
 
     ax.yaxis.set_major_locator(ticker.MultipleLocator(5))
     ax.yaxis.set_minor_locator(ticker.MultipleLocator(1))
 
-    ax.grid(ls='-', color='red', linewidth=4)
-    ax.grid(which="minor", ls=':', color='red', linewidth=3)
+    ax.grid(ls='-', color='red', linewidth=1.2)
+    ax.grid(which="minor", ls=':', color='red', linewidth=1)
 
     ax.axis([0-100, 2500+100, min(pannel_4_y)-10, max(pannel_1_y)+10])
 
@@ -104,24 +104,25 @@ def plot_a_lead(row_num=200):
         return '%s%s%s'%(text[:index],replacement,text[index+1:])
 
     def title_reshape(string):
-        if len(string) > 150:
-           num_patritions = round(len(string)/130)
+        if len(string) > 200:
+           num_patritions = round(len(string)/150)
            for i in range(1,num_patritions+1):
-                for pos, entry in enumerate(list(string[130*i::])):
+                for pos, entry in enumerate(list(string[150*i::])):
                     if entry == ' ':
-                        string = replace_str_index(string,pos + (130*i), '\n')
+                        string = replace_str_index(string,pos + (150*i), '\n')
                         break
         return string
 
-    ax.set_title(title_reshape(re.sub("\s\s+" , " ",data_set["Diag"].iloc[row_num].replace("ECG anormal","").replace(";","\t"))), fontsize=20, y=0.96,  backgroundcolor='white')
+    ax.set_title(title_reshape(re.sub("\s\s+" , " ",data_set["Diag"].iloc[row_num].replace("ECG anormal","").replace(";","\t"))), fontsize=20, y=0.94,  backgroundcolor='white')
     #plt.subplots_adjust(top=0.85)
 
     #add grid
     plt.tight_layout()
 
-    plt.savefig("/volume/image_3360/{}_{}_{}.jpg".format(data_set['RestingECG_PatientDemographics_PatientID'].iloc[row_num],data_set['RestingECG_TestDemographics_AcquisitionDate'].iloc[row_num], row_num))
-    
-plot_a_lead(row_num=0)
+    plt.savefig("/volume/validation_3_{}_{}_{}.jpg".format(data_set['RestingECG_PatientDemographics_PatientID'].iloc[row_num],data_set['RestingECG_TestDemographics_AcquisitionDate'].iloc[row_num], data_set['RestingECG_TestDemographics_AcquisitionTime'].iloc[row_num]))
 
-for i in data_set.index.tolist():
+plot_a_lead(row_num=200)
+
+from tqdm import tqdm
+for i in tqdm(data_set.index.tolist()):
     plot_a_lead(i)
