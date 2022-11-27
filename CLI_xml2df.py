@@ -14,8 +14,7 @@ import xmltodict
 from datetime import datetime
 import argparse
 
-#click arguments
-
+#argparse arguments
 def get_arguments():
     parser = argparse.ArgumentParser(description='Get argument',add_help=False)
 
