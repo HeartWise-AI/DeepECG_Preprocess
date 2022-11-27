@@ -1,6 +1,5 @@
 __author__ = 'alexis nolin-lapalme'
 __email__ = 'alexis.nolin-lapalme@umontreal.ca'
-__release__ = 0.1.0
 
 
 #utils
@@ -14,7 +13,8 @@ import xmltodict
 from datetime import datetime
 import argparse
 
-#argparse arguments
+#click arguments
+
 def get_arguments():
     parser = argparse.ArgumentParser(description='Get argument',add_help=False)
 
@@ -96,7 +96,7 @@ class tinyxml2df():
         df['xml_dir'] = files_with_xml
         
         if self.save == True:
-            df.to_csv(os.path.join(self.out_path, "df_xml_{}_n_{}.csv".format(datetime.now().strftime("%Y_%m_%d"),df.iloc[0])))
+            df.to_csv(os.path.join(self.out_path, "df_xml_{}_n_{}.csv".format(datetime.now().strftime("%Y_%m_%d"),df.shape[0])))
         return df
 
 def main(args):
