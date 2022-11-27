@@ -1,5 +1,6 @@
 __author__ = 'alexis nolin-lapalme'
 __email__ = 'alexis.nolin-lapalme@umontreal.ca'
+__release__ = 0.1.0
 
 
 #utils
