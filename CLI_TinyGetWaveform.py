@@ -1,7 +1,6 @@
-
 __author__ = 'alexis nolin-lapalme'
 __email__ = 'alexis.nolin-lapalme@umontreal.ca'
-__release__ = 0.1.0
+__release__ = "0.1.0"
 
 #utils
 import fnmatch
@@ -11,6 +10,7 @@ import re
 import numpy as np
 import pandas as pd
 import argparse
+import os
 
 #argparse arguments
 def get_arguments():
@@ -18,8 +18,8 @@ def get_arguments():
 
     parser.add_argument("--data_path", metavar="data_path", type=str, help="Enter path to xml2dict output")
     parser.add_argument("--out_path", metavar="out_path", type=str, help="Output dir", default=".")
-    parser.add_argument("--out_name", metavar="out_name", type=str, help="Output dir", default="TinyGetWaveform.csv")
-    parser.add_argument("--save", metavar="save", type=str, help="Output dir", default="/volume")
+    parser.add_argument("--out_name", metavar="out_name", type=str, help="Output name", default="TinyGetWaveform.csv")
+    parser.add_argument("--save", metavar="save", type=bool, help="Output dir", default=True)
     return parser
 
 
@@ -71,14 +71,14 @@ class TinyGetWaveform():
             self.data['Lead_Wavform_{}_ID_aVF'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values, mult=0.5)
         
         if self.save == True:
-            self.data.to_csv(self.save_path, self.out_name)
+            self.data.to_csv(os.path.join(self.save_path, self.out_name))
 
         return self.data
 
 
 def main(args):
     df_ = pd.read_csv(args.data_path)
-    TinyGetWaveform(df_,args.out_name,args.save,args.save_path).generate_dataset()
+    TinyGetWaveform(data=df_,out_name=args.out_name,save=args.save,save_path=args.out_path).generate_dataset()
     return 0
 
 
