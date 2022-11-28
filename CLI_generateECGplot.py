@@ -19,7 +19,7 @@ def get_arguments():
 
     parser.add_argument("--data_path", metavar="data_path", type=str, help="Enter path to xml2dict output")
     parser.add_argument("--out_path", metavar="out_path", type=str, help="Output dir", default=".")
-    parser.add_argument("--verbose", metavar="out_path", type=str, help="Output dir", default=True)
+    parser.add_argument("--verbose", metavar="verbose", type=str, help="Want progress bar?", default=True)
 
     return parser
 
