@@ -41,7 +41,7 @@ class TinyGetWaveform():
                     return np.array(array.array("h", lead_b64))
                 except:
                     raise ValueError(pd.isna(lead_data))
-                    
+
             else:
                 return lead_data
 
@@ -59,17 +59,17 @@ class TinyGetWaveform():
 
         #conventional boyz
         for wave in ['RestingECG_Waveform_0','RestingECG_Waveform_1']:
-            for entry in range(0,13):
+            for entry in range(13):
                 lead_col_name = "{}_LeadData_{}_WaveFormData".format(wave,entry)
                 if lead_col_name in self.data.columns:
                     lead_id= self.data["{}_LeadData_{}_LeadID".format(wave,entry)].dropna().values[0]
                     self.data['Lead_Wavform_{}_ID_{}'.format(wave[-1],lead_id)] = self.data[lead_col_name].map(transform_raw_lead)
-        
+
             self.data['Lead_Wavform_{}_ID_III'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values)
             self.data['Lead_Wavform_{}_ID_aVR'.format(wave[-1])] = longitudinal_add(self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values)
             self.data['Lead_Wavform_{}_ID_aVL'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values, mult=0.5)
             self.data['Lead_Wavform_{}_ID_aVF'.format(wave[-1])] = longitudinal_substract(self.data['Lead_Wavform_{}_ID_II'.format(wave[-1])].values,self.data['Lead_Wavform_{}_ID_I'.format(wave[-1])].values, mult=0.5)
-        
+
         if self.save == True:
             self.data.to_csv(os.path.join(self.save_path, self.out_name))
 

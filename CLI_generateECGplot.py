@@ -50,10 +50,10 @@ def plot_a_lead(data_set,save_path,row_num=1):
 
     lead_id_list = ['I','II','III', 'V1','V2','V3','V4','V5','V6', 'aVL','aVR','aVF']
 
-    pannel_1_y = list()
-    pannel_2_y = list()
-    pannel_3_t = list()
-    pannel_4_t = list()
+    pannel_1_y = []
+    pannel_2_y = []
+    pannel_3_t = []
+    pannel_4_t = []
 
     lead_dict = dict(zip(lead_id_list,[[] for i in range(len(lead_id_list))]))
 
@@ -63,7 +63,7 @@ def plot_a_lead(data_set,save_path,row_num=1):
             #resample at half the rate
             y = y[1::2] #sample half the points
 
-        
+
 
         lead_dict[lead] = list(bwr.bwr(butter_lowpass_filter(y,cutoff,fs,order))[1])
 
@@ -71,14 +71,35 @@ def plot_a_lead(data_set,save_path,row_num=1):
     activation = [0] *5 + [10] * 50 + [0] * 5
 
     #generate the pannels
-    pannel_1_y = [i + 50 for i in activation] + [((i*4.88)/100) + 50 for i in lead_dict['I'][60:625]] + [((i*4.88)/100) + 50 for i in lead_dict['aVR'][0:625]] + [((i*4.88)/100) + 50 for i in lead_dict['V1'][0:625]] + [((i*4.88)/100) + 50 for i in lead_dict['V4'][0:625]]
-    pannel_2_y = [i + 15 for i in activation] + [((i*4.88)/100) + 15 for i in lead_dict['II'][60:625]] + [((i*4.88)/100) + 15  for i in lead_dict['aVL'][0:625]] + [((i*4.88)/100) + 15  for i in lead_dict['V2'][0:625]] + [((i*4.88)/100) + 15  for i in lead_dict['V5'][0:625]]
-    pannel_3_y = [i - 15 for i in activation] + [((i*4.88)/100) - 15 for i in lead_dict['III'][60:625]] + [((i*4.88)/100) - 15 for i in lead_dict['aVF'][0:625]] + [((i*4.88)/100) - 15 for i in lead_dict['V3'][0:625]] + [((i*4.88)/100) - 15 for i in lead_dict['V6'][0:625]]
+    pannel_1_y = (
+        [i + 50 for i in activation]
+        + [((i * 4.88) / 100) + 50 for i in lead_dict['I'][60:625]]
+        + [((i * 4.88) / 100) + 50 for i in lead_dict['aVR'][:625]]
+        + [((i * 4.88) / 100) + 50 for i in lead_dict['V1'][:625]]
+        + [((i * 4.88) / 100) + 50 for i in lead_dict['V4'][:625]]
+    )
+
+    pannel_2_y = (
+        [i + 15 for i in activation]
+        + [((i * 4.88) / 100) + 15 for i in lead_dict['II'][60:625]]
+        + [((i * 4.88) / 100) + 15 for i in lead_dict['aVL'][:625]]
+        + [((i * 4.88) / 100) + 15 for i in lead_dict['V2'][:625]]
+        + [((i * 4.88) / 100) + 15 for i in lead_dict['V5'][:625]]
+    )
+
+    pannel_3_y = (
+        [i - 15 for i in activation]
+        + [((i * 4.88) / 100) - 15 for i in lead_dict['III'][60:625]]
+        + [((i * 4.88) / 100) - 15 for i in lead_dict['aVF'][:625]]
+        + [((i * 4.88) / 100) - 15 for i in lead_dict['V3'][:625]]
+        + [((i * 4.88) / 100) - 15 for i in lead_dict['V6'][:625]]
+    )
+
     pannel_4_y = [i - 50 for i in activation] + [((i*4.88)/100) - 50 for i in lead_dict['II'][60::]]
 
     fig, ax = plt.subplots(figsize=(40, 20))
     ax.minorticks_on()
- 
+
     ax.vlines(60,-10,-20, label='III', linewidth=4)
     ax.text(60, -10, 'III', fontsize=44)
 
@@ -90,7 +111,7 @@ def plot_a_lead(data_set,save_path,row_num=1):
 
     ax.vlines(1875,-10,-20, label='V6', linewidth=4)
     ax.text(1875, -10, 'V6', fontsize=44)
-    
+
     ax.vlines(60,10,20, label='II', linewidth=4)
     ax.text(60, 20, 'II', fontsize=44)
 
@@ -129,14 +150,14 @@ def plot_a_lead(data_set,save_path,row_num=1):
 
     ax.axis([0-100, 2500+100, min(pannel_4_y)-10, max(pannel_1_y)+10])
 
-    x = [pos for pos in range(0, len(pannel_1_y))]
+    x = list(range(len(pannel_1_y)))
     ax.plot(x,pannel_1_y,linewidth=3, color='#000000')
     ax.plot(x,pannel_2_y,linewidth=3, color='#000000')
     ax.plot(x,pannel_3_y,linewidth=3, color='#000000')
     ax.plot(x,pannel_4_y,linewidth=3, color='#000000')
 
     def replace_str_index(text,index=0,replacement=''):
-        return '%s%s%s'%(text[:index],replacement,text[index+1:])
+        return f'{text[:index]}{replacement}{text[index + 1:]}'
 
     def title_reshape(string):
         if len(string) > 200:
@@ -162,5 +183,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser('run the script', parents=[get_arguments()])
     args = parser.parse_args()
     dataset = pd.read_csv(args.data_path)
-    for pos,i in enumerate(tqdm(range(0,dataset.shape[0])) if args.verbose else range(0,dataset.shape[0])):
+    for i in tqdm(range(dataset.shape[0])) if args.verbose else range(dataset.shape[0]):
         plot_a_lead(data_set=dataset,save_path=args.out_path,row_num=i)
