@@ -77,23 +77,29 @@ class tinyxml2df():
     def read2flatten(self):
         xml_dict_list = list()
         path_list = list()
+        xml_list = list()
         files_with_xml = [_ for _ in os.listdir(self.path) if _.endswith('.xml')]
 
         #iterate through all the files name verbose or not
         print("{} | Currently transforming {} xml files from dir {} into dict".format(datetime.now().strftime("%H:%M:%S"),len(files_with_xml),self.path))
         for pos,file_xml in enumerate(tqdm(files_with_xml) if self.verbose else files_with_xml): 
             with open(os.path.join(self.path,file_xml), 'r') as xml:
-                path_list.append(os.path.join(self.path,file_xml))
-                #load
-                ECG_data_nested = xmltodict.parse(xml.read())
-                #flatten
-                ECG_data_flatten = self.flatten(ECG_data_nested)
-                #append to the list
-                xml_dict_list.append(ECG_data_flatten.copy())
+                try:
+                    with open(os.path.join(self.path,file_xml), 'r') as xml:
+                        path_list.append(os.path.join(self.path,file_xml))
+                        #load
+                        ECG_data_nested = xmltodict.parse(xml.read())
+                        #flatten
+                        ECG_data_flatten = self.flatten(ECG_data_nested)
+                        #append to the list
+                        xml_dict_list.append(ECG_data_flatten.copy())
+                        xml_list.append(file_xml)
+                except:
+                    print("{} does not exist".format(file_xml))
 
         df = self.fusediagcols(pd.DataFrame(xml_dict_list))
         df = self.check_abnoramlity(df)
-        df['xml_dir'] = files_with_xml
+        df['xml_name'] = xml_list
         
         if self.save == True:
             df.to_csv(os.path.join(self.out_path, "df_xml_{}_n_{}.csv".format(datetime.now().strftime("%Y_%m_%d"),df.shape[0])))
