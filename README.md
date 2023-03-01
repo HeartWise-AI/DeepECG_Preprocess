@@ -1,9 +1,16 @@
 ## DeepECG Repo
 
-#### tinixmltodict: 
+![image](flowchart_deepecg.drawio.png)
 
-Class that takes in a path of xml and transforms all the xml into a dict without removing any info, concatenates potential human-specific errors during entry for diagnostics (cols -1 and -2). Should take ~20-25 mins to run. 
 
-To run:
+#### CLI_tinixml2dict.py: 
 
-`df = tinyxml2df("path_to_xml").read2flatten(verbose=True, output_dir=os.getcwd(), save=False)`
+Generate the df with the specified directory 
+
+`python cli_xml2df.py --xml_path "/media/data1/muse_ge/ecg_retrospective" --out_path '.' --verbose True --save True`
+
+#### CLI_TinyGetWaveform.py
+
+Generate the lead data with the specified file
+
+`python cli_lead.py --data_path "./df_xml_2022_11_27_n_738393.csv" --out_path "."`
