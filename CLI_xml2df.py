@@ -1,3 +1,8 @@
+__author__ = 'alexis nolin-lapalme'
+__email__ = 'alexis.nolin-lapalme@umontreal.ca'
+
+
+#utils
 import numpy as np
 import os
 from tqdm import tqdm
@@ -5,11 +10,28 @@ from datetime import datetime
 import pandas as pd
 from copy import copy
 import xmltodict
+from datetime import datetime
+import argparse
+
+#click arguments
+
+def get_arguments():
+    parser = argparse.ArgumentParser(description='Get argument',add_help=False)
+
+    parser.add_argument("--xml_path", metavar="xml_path", type=str, help="Enter path to xml", default="/media/data1/muse_ge/ecg_retrospective")
+    parser.add_argument("--out_path", metavar="out_path", type=str, help="Output dir", default="/volume")
+    parser.add_argument("--verbose", metavar="verbose", type=bool, help="Do you want a progress bar?", default=True)
+    parser.add_argument("--save", metavar="save", type=bool, help="Do you want to save [debug option]", default=True)
+    return parser
+
 
 class tinyxml2df():
-    def __init__(self, path:str):
-        self.path = path
-        
+    def __init__(self, in_path:str, out_path:str='/media/data1/anolin/ECG', verbose:bool=True, save:bool=True):
+        self.path = in_path
+        self.out_path = out_path
+        self.verbose = verbose
+        self.save = save
+
     def flatten(self,input_node: dict, key_: str = '', output_dict: dict = {}):
         if isinstance(input_node, dict):
             for key, val in input_node.items():
@@ -52,26 +74,42 @@ class tinyxml2df():
         data['warnings'] = list_abnormality
         return data
 
-    def read2flatten(self, verbose: bool=True, output_dir: str='/media/data1/anolin/ECG', save: bool=True):
+    def read2flatten(self):
         xml_dict_list = list()
         path_list = list()
+        xml_list = list()
         files_with_xml = [_ for _ in os.listdir(self.path) if _.endswith('.xml')]
 
         #iterate through all the files name verbose or not
         print("{} | Currently transforming {} xml files from dir {} into dict".format(datetime.now().strftime("%H:%M:%S"),len(files_with_xml),self.path))
-        for pos,file_xml in enumerate(tqdm(files_with_xml) if verbose else files_with_xml): 
+        for pos,file_xml in enumerate(tqdm(files_with_xml) if self.verbose else files_with_xml): 
             with open(os.path.join(self.path,file_xml), 'r') as xml:
-                path_list.append(os.path.join(self.path,file_xml))
-                #load
-                ECG_data_nested = xmltodict.parse(xml.read())
-                #flatten
-                ECG_data_flatten = self.flatten(ECG_data_nested)
-                #append to the list
-                xml_dict_list.append(ECG_data_flatten.copy())
+                try:
+                    with open(os.path.join(self.path,file_xml), 'r') as xml:
+                        path_list.append(os.path.join(self.path,file_xml))
+                        #load
+                        ECG_data_nested = xmltodict.parse(xml.read())
+                        #flatten
+                        ECG_data_flatten = self.flatten(ECG_data_nested)
+                        #append to the list
+                        xml_dict_list.append(ECG_data_flatten.copy())
+                        xml_list.append(file_xml)
+                except:
+                    print("{} does not exist".format(file_xml))
 
         df = self.fusediagcols(pd.DataFrame(xml_dict_list))
         df = self.check_abnoramlity(df)
+        df['xml_name'] = xml_list
         
-        if save == True:
-            df.to_csv(os.path.join(output_dir, "df_xml.csv"))
+        if self.save == True:
+            df.to_csv(os.path.join(self.out_path, "df_xml_{}_n_{}.csv".format(datetime.now().strftime("%Y_%m_%d"),df.shape[0])))
         return df
+
+def main(args):
+    tinyxml2df(args.xml_path,args.out_path,args.verbose,args.save).read2flatten()
+    return 0
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Process some xml into a df',parents=[get_arguments()])
+    args = parser.parse_args()
+    main(args)
