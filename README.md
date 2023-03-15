@@ -2,10 +2,9 @@
 
 ![image](flowchart_deepecg.drawio.png)
 
+#### CLI_tinixml2dict.py:
 
-#### CLI_tinixml2dict.py: 
-
-Generate the df with the specified directory 
+Generate the df with the specified directory
 
 `python cli_xml2df.py --xml_path "/media/data1/muse_ge/ecg_retrospective" --out_path '.' --verbose True --save True`
 
