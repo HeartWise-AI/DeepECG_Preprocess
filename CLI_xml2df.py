@@ -217,6 +217,8 @@ class tinyxml2df:
 
     def flatten(self, input_node: dict, key_: str = "", output_dict: dict = {}):
         self.remove_a_key(input_node, "Waveform")
+        self.remove_a_key(input_node, "OriginalDiagnosis")
+        self.remove_a_key(input_node, "Diagnosis")
 
         if isinstance(input_node, dict):
             for key, val in input_node.items():
@@ -228,8 +230,6 @@ class tinyxml2df:
         else:
             output_dict[key_] = input_node
 
-        self.remove_a_key(output_dict, "RestingECG_Diagnosis_DiagnosisStatement")
-        self.remove_a_key(output_dict, "RestingECG_OriginalDiagnosis_DiagnosisStatement")
         return output_dict
 
     def check_abnoramlity(self, data: pd.DataFrame):
@@ -278,25 +278,30 @@ class tinyxml2df:
                 npy_extracted = self.xml_to_np_array_file(
                     ECG_data_nested, os.path.join(self.out_path, "ecg_npy/")
                 )
-                # pdb.set_trace()
-                # flatten
-                dx_txt = []
-                for line in ECG_data_nested["RestingECG"]["Diagnosis"]["DiagnosisStatement"]:
-                    dx_txt.append(line["StmtText"])
-                ## Flatten array dx_txt and add whitespace between each element
-                dx_txt = " ".join(dx_txt)
-                dx_txt_list.append(dx_txt)
 
-                original_dx_txt = []
-                for line in ECG_data_nested["RestingECG"]["OriginalDiagnosis"][
-                    "DiagnosisStatement"
-                ]:
-                    original_dx_txt.append(line["StmtText"])
-                original_dx_txt = " ".join(original_dx_txt)
-                original_dx_txt_list.append(original_dx_txt)
+                try:
+                    dx_txt = []
+                    for line in ECG_data_nested["RestingECG"]["Diagnosis"]["DiagnosisStatement"]:
+                        dx_txt.append(line["StmtText"])
+                    ## Flatten array dx_txt and add whitespace between each element
+                    dx_txt = " ".join(dx_txt)
+                    dx_txt_list.append(dx_txt)
+                except:
+                    # print(ECG_data_nested)
+                    dx_txt_list.append("-1")
+                try:
+                    original_dx_txt = []
+                    for line in ECG_data_nested["RestingECG"]["OriginalDiagnosis"][
+                        "DiagnosisStatement"
+                    ]:
+                        original_dx_txt.append(line["StmtText"])
+                    original_dx_txt = " ".join(original_dx_txt)
+                    original_dx_txt_list.append(original_dx_txt)
+                except:
+                    original_dx_txt_list.append("-1")
 
                 ECG_data_flatten = self.flatten(ECG_data_nested)
-                print(ECG_data_flatten)
+
                 # append to the list
                 ECG_extracted = xml_dict_list.append(ECG_data_flatten.copy())
                 if npy_extracted == None:
