@@ -217,6 +217,7 @@ class tinyxml2df:
 
     def flatten(self, input_node: dict, key_: str = "", output_dict: dict = {}):
         self.remove_a_key(input_node, "Waveform")
+
         if isinstance(input_node, dict):
             for key, val in input_node.items():
                 new_key = f"{key_}_{key}" if key_ else f"{key}"
@@ -226,37 +227,22 @@ class tinyxml2df:
                 self.flatten(item, f"{key_}_{idx}", output_dict)
         else:
             output_dict[key_] = input_node
+
+        self.remove_a_key(output_dict, "RestingECG_Diagnosis_DiagnosisStatement")
+        self.remove_a_key(output_dict, "RestingECG_OriginalDiagnosis_DiagnosisStatement")
         return output_dict
-
-    def fusediagcols(self, df: pd.DataFrame):
-        df["Original_Diag"] = ""
-        df["Diag"] = ""
-
-        for col in [
-            _ for _ in df.columns if "RestingECG_OriginalDiagnosis_DiagnosisStatement" in _
-        ]:
-            df["Original_Diag"] = df["Original_Diag"].str.cat(df[col].fillna("").copy(), sep=" ")
-        for col in [_ for _ in df.columns if "RestingECG_Diagnosis_DiagnosisStatement" in _]:
-            df["Diag"] = df["Diag"].str.cat(df[col].fillna("").copy(), sep=" ")
-
-        df["Diag"] = df["Diag"].str.replace(r"ENDSLINE", "")
-        df["Diag"] = df["Diag"].str.replace(r"USERINSERT", "")
-
-        df["Original_Diag"] = df["Original_Diag"].str.replace(r"ENDSLINE", "")
-        df["Original_Diag"] = df["Original_Diag"].str.replace(r"USERINSERT", "")
-
-        return df
 
     def check_abnoramlity(self, data: pd.DataFrame):
         warn = ["Analyse impossible", "ECG anormal"]
         list_abnormality = [0] * data.shape[0]
-        for pos, entry in enumerate(data["Original_Diag"].values):
+        for pos, entry in enumerate(data["original_diagnosis"].values):
             if any(x in entry for x in warn):
                 list_abnormality[pos] = -1
 
-        for pos, entry in enumerate(data["Diag"].values):
+        for pos, entry in enumerate(data["diagnosis"].values):
             if any(x in entry for x in warn):
                 list_abnormality[pos] = -1
+
         data["warnings"] = list_abnormality
         return data
 
@@ -266,6 +252,9 @@ class tinyxml2df:
         xml_list = list()
         extracted = list()
         npy_list = list()
+        dx_txt_list = list()
+        original_dx_txt_list = list()
+
         # print(self.path)
         # files_with_xml = self.path.apply(lambda path: [_ for _ in os.listdir(path) if _.endswith('.xml')]).sum()
         ## Make directory self.out_path if it doesn't exist
@@ -284,13 +273,30 @@ class tinyxml2df:
             with open(os.path.join(file_xml)) as xml:
                 path_list.append(os.path.join(file_xml))
                 # load
+                # *|MARKER_CURSOR|*
                 ECG_data_nested = xmltodict.parse(xml.read())
                 npy_extracted = self.xml_to_np_array_file(
                     ECG_data_nested, os.path.join(self.out_path, "ecg_npy/")
                 )
-
+                # pdb.set_trace()
                 # flatten
+                dx_txt = []
+                for line in ECG_data_nested["RestingECG"]["Diagnosis"]["DiagnosisStatement"]:
+                    dx_txt.append(line["StmtText"])
+                ## Flatten array dx_txt and add whitespace between each element
+                dx_txt = " ".join(dx_txt)
+                dx_txt_list.append(dx_txt)
+
+                original_dx_txt = []
+                for line in ECG_data_nested["RestingECG"]["OriginalDiagnosis"][
+                    "DiagnosisStatement"
+                ]:
+                    original_dx_txt.append(line["StmtText"])
+                original_dx_txt = " ".join(original_dx_txt)
+                original_dx_txt_list.append(original_dx_txt)
+
                 ECG_data_flatten = self.flatten(ECG_data_nested)
+                print(ECG_data_flatten)
                 # append to the list
                 ECG_extracted = xml_dict_list.append(ECG_data_flatten.copy())
                 if npy_extracted == None:
@@ -302,11 +308,13 @@ class tinyxml2df:
 
                 xml_list.append(file_xml)
 
-        df = self.fusediagcols(pd.DataFrame(xml_dict_list))
-        df = self.check_abnoramlity(df)
+        df = pd.DataFrame(xml_dict_list)
+        df["diagnosis"] = dx_txt_list
+        df["original_diagnosis"] = original_dx_txt_list
         df["xml_path"] = xml_list
         df["npy_path"] = npy_list
         df["extracted"] = extracted
+        df = self.check_abnoramlity(df)
 
         if self.save == True:
             df.to_csv(
