@@ -46,7 +46,6 @@ def get_arguments():
     )
     return parser
 
-
 class tinyxml2df:
     def __init__(
         self,
@@ -83,7 +82,6 @@ class tinyxml2df:
     def decode_ekg_muse_to_array(self, raw_wave, downsample=1):
         """
         Ingest the base64 encoded waveforms and transform to numeric
-
         downsample: 0.5 takes every other value in the array. Muse samples at 500/s and the sample model requires 250/s. So take every other.
         """
         try:
@@ -266,12 +264,13 @@ class tinyxml2df:
 
         # iterate through all the files name verbose or not
         # print("{} | Currently transforming {} xml files from dir {} into dict".format(datetime.now().strftime("%H:%M:%S"),len(files_with_xml),self.path))
+        list_files = os.listdir(self.path)
         for file_xml in tqdm(
-            self.path, total=len(self.path), desc="Transforming xml files into dict"
+           list_files, total=len(list_files), desc="Transforming xml files into dict"
         ):
             # with open(os.path.join(self.path,file_xml), 'r') as xml:
-            with open(os.path.join(file_xml)) as xml:
-                path_list.append(os.path.join(file_xml))
+            with open(os.path.join(self.path,file_xml)) as xml:
+                path_list.append(os.path.join(self.path,file_xml))
                 # load
                 # *|MARKER_CURSOR|*
                 ECG_data_nested = xmltodict.parse(xml.read())
@@ -311,7 +310,7 @@ class tinyxml2df:
                     extracted.append("True")
                     npy_list.append(npy_extracted)
 
-                xml_list.append(file_xml)
+                xml_list.append(os.path.join(self.path,file_xml))
 
         df = pd.DataFrame(xml_dict_list)
         df["diagnosis"] = dx_txt_list
