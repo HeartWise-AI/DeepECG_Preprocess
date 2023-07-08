@@ -1,0 +1,116 @@
+#similar to the wandb yaml with extra goodies 
+
+#name the run, this will populate the seep
+run_name: "train run 1"
+name_sweep: "sweep 1"
+
+method: 'bayes'
+metric:
+  name: PR
+  goal: maximize
+
+#extra stuff
+
+resume_previous_run: False
+
+#how many blocks to run
+block_to_run: 1
+
+#bloc ordering 
+bloc_order:
+  - model
+  - optimizer
+  - loss
+  - regularization
+  - fine_tuning
+
+#top x to select for next bloc (int)
+best_to_select: 3
+
+three_seeds: [420,1997,2023]
+
+#allow for exemble models (bool)
+allow_ensemble: True
+
+#save models training data and final weights
+save_info: True
+save_dir: '/volume/core_model'
+
+verbose: True
+
+#sweep config
+config:
+  #block model
+  models:
+    #comment out those to not run
+    #- resnet18
+    #- resnet34
+    #- resnet50
+    #- resnet101
+    #- resnet152
+    #- seresnet18
+    #- seresnet34
+    #- seresnet50
+    #- seresnet101
+    #- seresnet152
+    #- seresnext50
+    - seresnext101
+    #- senet154
+    #- resnext50
+    #- resnext101
+    #- vgg16
+    #- vgg19
+    #- densenet121
+    #- densenet169
+    #- densenet201
+    #- mobilenetv2
+    #- inceptionresnetv2
+    #- inceptionv3
+    #- EfficientNetB0
+    #- EfficientNetB1
+    #- EfficientNetB2
+    #- EfficientNetB3
+    #- EfficientNetB4
+    #- EfficientNetB5
+    #- EfficientNetB6
+    #- EfficientNetB7
+    #- EfficientNetV2B0
+    #- EfficientNetV2B1
+    #- EfficientNetV2B2
+    #- EfficientNetV2B3
+    #- EfficientNetV2S
+    #- EfficientNetV2M
+    #- EfficientNetV2L
+
+
+  kernel_size: ['default',5,7,9,11]
+
+
+optimization:
+  learning_rate: [1e-6, 1e-1]
+  optimizer:
+    - Adam
+    - RMSProp
+    - SGD
+  
+  batch_size: [64,128,256]
+
+loss:
+  - BCE
+  - BinaryFocalLoss: 
+    - gamma: [1, 5]
+  - BinaryPolyLoss
+  - LabelSmoothingCrossEntropy
+
+reg_approaches:
+  - Dropout: [0,0.1,0.2,0.3,0.4,0.5]
+  - L1: [1e-3,1e-6]
+  - L2: [1e-3,1e-6]
+  - Labelsmoothing
+  
+
+
+
+
+
+
