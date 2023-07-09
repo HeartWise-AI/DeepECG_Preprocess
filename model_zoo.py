@@ -1,5 +1,5 @@
 import os
-#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 os.environ['CUDA_VISIBLE_DEVICES']='0,1'
 os.environ['WANDB_WATCH'] = 'false'
@@ -24,17 +24,16 @@ import functools
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, Dropout, BatchNormalization, Activation, InputLayer, SeparableConv1D
 from keras import Model
 import tensorflow_addons as tfa
+from tensorflow.keras.utils import Sequence
+from keras import backend as K
+from focal_loss import BinaryFocalLoss
 
 
 tensorflow_version = float(tf.__version__[0:3])
 
 # Get the GPU memory fraction to allocate
-gpu_memory_fraction = 0.9
-
-# Create GPUOptions with the fraction of GPU memory to allocate
+gpu_memory_fraction = 0.5
 gpu_options = tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=gpu_memory_fraction)
-
-# Create a session with the GPUOptions
 session = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(gpu_options=gpu_options))
 
 wandb.login()
@@ -56,40 +55,21 @@ def step_color(bloc_order, position):
 
     return ''.join(formattedText)
 
-def init_wandb(dict_yaml):
+def init_wandb(dict_yaml, step = 'model'):
     
-    config={
-        'name': dict_yaml['name_sweep'],
-        'method': dict_yaml['method'],
-        'metric': {'goal': dict_yaml['metric']['goal'], 'name': dict_yaml['metric']['name']},
-        'parameters':
-        {
-            'models': {'values':dict_yaml['config']['models']}
+    if step == 'model':
+        config={
+            'name': dict_yaml['name_sweep'] + '_models',
+            'method': 'grid',
+            'metric': {'goal': dict_yaml['metric']['goal'], 'name': dict_yaml['metric']['name']},
+            'parameters':
+            {
+                'models': {'values':dict_yaml['config']['models']}
 
-        }
-    }    
+            }
+        }    
 
     return config
-
-from keras import backend as K
-from sklearn.metrics import precision_recall_curve, auc, roc_auc_score
-
-def macro_auc(y_true, y_pred):
-    return roc_auc_score(y_true, y_pred, multi_class='ovr',average='macro')
-
-def micro_auc(y_true, y_pred):
-    return roc_auc_score(y_true, y_pred, multi_class='ovr', average='micro')
-
-def sample_auc(y_true, y_pred):
-    return roc_auc_score(y_true, y_pred,  multi_class='ovr' , average='samples')
-
-def averaged_metric(y_true, y_pred):
-    return (micro_auc(y_true, y_pred) + macro_auc(y_true, y_pred))/2
-
-
-def auc_pr(y_true, y_pred):
-    precision, recall, _ = precision_recall_curve(y_true, y_pred)
-    return roc_auc_score(recall, precision)
 
 def set_seeds(seed):
     os.environ['PYTHONHASHSEED'] = str(seed)
@@ -99,9 +79,6 @@ def set_seeds(seed):
 
 with open('test.yml', 'r') as file:
     prime_service = yaml.safe_load(file)
-prime_service
-
-
 
 #print user paraeters
 
@@ -128,22 +105,35 @@ sweep_configuration = init_wandb(prime_service)
 print(sweep_configuration)
 sweep_id = wandb.sweep(sweep=sweep_configuration, project=prime_service['run_name'])
 
-data_dir = '/media/data1/anolin/new_split/'
 
-def main(prime_service):
-    #select vanilla model
+from tensorflow.keras.utils import Sequence
+import numpy as np   
 
-    run = wandb.init(project=prime_service['run_name'])
+class DataGenerator(Sequence):
+    def __init__(self, x_set, y_set, batch_size):
+        self.x, self.y = x_set, y_set
+        self.batch_size = batch_size
+
+    def __len__(self):
+        return int(np.ceil(len(self.x) / float(self.batch_size)))
+
+    def __getitem__(self, idx):
+        batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
+        return batch_x, batch_y
+
+
+
+def block_1_1(prime_service):
+
+    run = wandb.init()
 
     save_dict = {}
 
     #load model
     print(wandb.config)
-
     loaded_architecture, _ = Classifiers.get(wandb.config.models)
-
     print('Currently running {}'.format(wandb.config.models))
-
 
     base = loaded_architecture(
     input_shape=(2500, 12),
@@ -167,14 +157,13 @@ def main(prime_service):
                                                                  tfa.metrics.F1Score(num_classes=77,average='micro', name='F1_micro'), 
                                                                  tfa.metrics.F1Score(num_classes=77,average='macro', name='F1_macro'), 
                                                                  tf.keras.metrics.SpecificityAtSensitivity(0.5,name='specificity'), 
-                                                                 tf.keras.metrics.SensitivityAtSpecificity(0.5,name='sensitivity'),
-                                                                 tfa.metrics.HammingLoss(mode='multilabel')], run_eagerly=False)
+                                                                 tf.keras.metrics.SensitivityAtSpecificity(0.5,name='sensitivity')], run_eagerly=False)
 
-    early_stop = EarlyStopping(monitor='val_loss', patience=3, verbose=2)
+    early_stop = EarlyStopping(monitor='val_loss', patience=5, verbose=2)
     lrplateau = ReduceLROnPlateau(  
     monitor="val_loss",
     factor=0.1,
-    patience=2,
+    patience=3,
     verbose=0,
     mode="auto", 
     min_delta=0.0001,
@@ -182,7 +171,6 @@ def main(prime_service):
     min_lr=1e-12)
 
     #load data
-
     categorical_accuracy_list = list()
     binary_accuracy_list = list()
     AUC_list = list()
@@ -195,52 +183,67 @@ def main(prime_service):
 
     list_of_metrics = [categorical_accuracy_list,binary_accuracy_list,AUC_list,PR_list,F1_micro_list,F1_macro_list,Sensitivity_list,Specificity_list,Hamming_list]
 
+    try:
+        os.mkdir(os.path.join(prime_service['save_dir'],wandb.config.models))
+    except:
+        pass
+
     for split in range(3):
         gc.collect()
-
         set_seeds(prime_service['three_seeds'][split])
+        try:
+            os.mkdir(os.path.join(prime_service['save_dir'],wandb.config.models,'split_{}'.format(split)))
+        except:
+            pass        
 
-        X_train = np.load("/media/data1/anolin/split_smaller_for_ram/split_0/train_X_6k.npy".format(split))
-        print(X_train.shape)
-        Y_train = np.load("/media/data1/anolin/split_smaller_for_ram/split_0/train_Y_6k.npy".format(split))
-        print(Y_train.shape)
+        X_train = np.load("/media/data1/anolin/split_smaller_for_ram/split_{}/test_X.npy".format(split))
+        Y_train = np.load("/media/data1/anolin/split_smaller_for_ram/split_{}/test_Y.npy".format(split))
 
-        X_val = np.load("/media/data1/anolin/split_smaller_for_ram/split_0/val_X.npy".format(split))
-        print(X_val.shape)
-        Y_val = np.load("/media/data1/anolin/split_smaller_for_ram/split_0/val_Y.npy".format(split))
+        X_val = np.load("/media/data1/anolin/split_smaller_for_ram/split_{}/val_X.npy".format(split))
+        Y_val = np.load("/media/data1/anolin/split_smaller_for_ram/split_{}/val_Y.npy".format(split))
+
+        train_gen = DataGenerator(X_train, Y_train, prime_service['batch_size'])
+        val_gen = DataGenerator(X_val, Y_val,  prime_service['batch_size'])
 
 
-        model.fit(X_train, Y_train,
-            validation_data=(X_val,Y_val),
-            batch_size=16,
-            use_multiprocessing=False,
-            epochs=100,
+        history = model.fit(train_gen,
+            validation_data=val_gen,
+            epochs=prime_service['num_epochs'],
+            callbacks=[lrplateau,early_stop],
             verbose=1)
 
+        #del var to make some space
+        del X_train
+        del Y_train
+        del X_val
+        del Y_val
+
         #evaluate model
-        X_test = np.load("/media/data1/anolin/split_smaller_for_ram/split_0/test_X.npy".format(str(split)))
-        Y_test = np.load("/media/data1/anolin/split_smaller_for_ram/split_0/test_Y.npy".format(str(split)))
-        metrics = model.evaluate(x_test, y_test,batch_size=512)
+        X_test = np.load("/media/data1/anolin/split_smaller_for_ram/split_{}/test_X.npy".format(str(split)))
+        Y_test = np.load("/media/data1/anolin/split_smaller_for_ram/split_{}/test_Y.npy".format(str(split)))
+        test_gen = DataGenerator(X_test, Y_test, prime_service['batch_size'])
+        metrics = model.evaluate(test_gen)
+
+        del X_test
+        del Y_test
 
         dict_results = dict()
-        for pos,i in enumerate(['categorical_accuracy','binary_accuracy','AUC','PR','F1_micro','F1_macro','Sensitivity','Specificity','Hamming']):
+        for pos,i in enumerate(['categorical_accuracy','binary_accuracy','AUC','PR','F1_micro','F1_macro','Sensitivity','Specificity']):
             dict_results.update({i:metrics[pos]})
             list_of_metrics[pos].append(metrics[pos])
 
+        #save out metrics
+        save_dict.update({'{}_{}'.format(wandb.config.models,split):{'history':history.history, 'test_performances':dict_results}})
 
-        if prime_service['save_info'] == True:
-            #save out metrics
-            save_dict.update({'{}_{}'.format(wandb.config.models,split):{'history':history.history, 'test_performances':dict_results, 'y_pred':Y_test_pred}})
-
-            #save model weights
-            model_selected.save_weights('{}_{}.h5'.format(wandb.config.models,split))
-        
+        #save model weights
+        model.save_weights(os.path.join(prime_service['save_dir'],wandb.config.models,'split_{}'.format(split),'{}_{}.h5'.format(wandb.config.models,split)))
         gc.collect()
 
 
-    print('Perfroances for {} were {} ± {}'.format(wandb.config.models,mean(list_scores), stdev(list_scores)))
-    save_dict.update({wandb.config.models:mean(list_scores)})
+    print('Perfroances for {} were {} ± {}'.format(wandb.config.models,mean(list_of_metrics[3]), stdev(list_of_metrics[3])))
 
+    with open(os.path.join(prime_service['save_dir'],wandb.config.models,'saved_outputs_detailed.pickle'), 'wb') as handle:
+        pickle.dump(save_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     wandb.log({
     'model': wandb.config.models, 
@@ -251,14 +254,9 @@ def main(prime_service):
     'F1_micro':mean(list_of_metrics[4]),
     'F1_macro':mean(list_of_metrics[5]),
     'Sensitivity': mean(list_of_metrics[6]),
-    'Specificity': mean(list_of_metrics[7]),
-    'Hamming': mean(list_of_metrics[8])
-    })
+    'Specificity': mean(list_of_metrics[7])})
 
-    if prime_service['bloc_order'] == True:
-        with open(os.path.join(prime_service['save_dir'],'saved_outputs_detailed.{}.step_{}.pickle'.format(prime_service['name_sweep'],'block_1_1')), 'wb') as handle:
-            pickle.dump(save_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+wandb.agent(sweep_id, function=functools.partial(block_1_1,prime_service), count=len(prime_service['config']['models']))
+wandb.finish()
 
-    wandb.finish()
 
-wandb.agent(sweep_id, function=functools.partial(main, prime_service), count=1)
