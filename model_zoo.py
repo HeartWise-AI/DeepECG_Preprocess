@@ -196,11 +196,11 @@ def block_1_1(prime_service):
         except:
             pass        
 
-        X_train = np.load("/media/data1/anolin/split_smaller_for_ram/split_{}/test_X.npy".format(split))
-        Y_train = np.load("/media/data1/anolin/split_smaller_for_ram/split_{}/test_Y.npy".format(split))
+        X_train = np.load("/media/data1/anolin/new_split/split_{}/train_X.npy".format(split))
+        Y_train = np.load("/media/data1/anolin/new_split/split_{}/train_Y.npy".format(split))
 
-        X_val = np.load("/media/data1/anolin/split_smaller_for_ram/split_{}/val_X.npy".format(split))
-        Y_val = np.load("/media/data1/anolin/split_smaller_for_ram/split_{}/val_Y.npy".format(split))
+        X_val = np.load("/media/data1/anolin/new_split/split_{}/val_X.npy".format(split))
+        Y_val = np.load("/media/data1/anolin/new_split/split_{}/val_Y.npy".format(split))
 
         train_gen = DataGenerator(X_train, Y_train, prime_service['batch_size'])
         val_gen = DataGenerator(X_val, Y_val,  prime_service['batch_size'])
@@ -219,8 +219,8 @@ def block_1_1(prime_service):
         del Y_val
 
         #evaluate model
-        X_test = np.load("/media/data1/anolin/split_smaller_for_ram/split_{}/test_X.npy".format(str(split)))
-        Y_test = np.load("/media/data1/anolin/split_smaller_for_ram/split_{}/test_Y.npy".format(str(split)))
+        X_test = np.load("/media/data1/anolin/new_split/split_{}/test_X.npy".format(str(split)))
+        Y_test = np.load("/media/data1/anolin/new_split/split_{}/test_Y.npy".format(str(split)))
         test_gen = DataGenerator(X_test, Y_test, prime_service['batch_size'])
         metrics = model.evaluate(test_gen)
 
