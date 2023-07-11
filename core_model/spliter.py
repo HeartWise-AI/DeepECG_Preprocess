@@ -21,23 +21,6 @@ data_['RestingECG_PatientDemographics_PatientID'] = [str(i).zfill(7) for i in da
 data = data_.sort_values(by=['RestingECG_PatientDemographics_PatientID'])
 data = data[data.annotated != -1]
 
-from sklearn.model_selection import train_test_split
-from tqdm import tqdm
-import pandas as pd
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
-from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
-from sklearn.utils import indexable, _safe_indexing
-from sklearn.utils.validation import _num_samples
-from sklearn.model_selection._split import _validate_shuffle_split
-from itertools import chain
-import warnings
-import tensorflow as tf
-import random, os
-import numpy as np
-
-
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -123,12 +106,13 @@ def seed_everything(seed: int):
 def NormalizeData(data):
     return (data - np.min(data)) / (np.max(data) - np.min(data))
 
-
-def transform_final(dataset, name):
-    try:
+def transform_(dataset, name, split=0):
+    
+    if not os.path.exists("/media/data1/anolin/split_smaller_for_ram/{}".format(name)) and name == 'final':
         os.mkdir("/media/data1/anolin/split_smaller_for_ram/{}".format(name))
-    except:
-        print('Try {}'.format("/media/data1/anolin/split_smaller_for_ram/{}".format(name)))
+
+    if not os.path.exists("/media/data1/anolin/split_smaller_for_ram/split_{}".format(split)) and name != 'final':
+        os.mkdir("/media/data1/anolin/split_smaller_for_ram/{}".format(name))
 
     start_col = 280
     end_col = 357
@@ -136,9 +120,11 @@ def transform_final(dataset, name):
     temp_data = list()
     list_to_remove = list()
 
-    for pos,(path,labels) in enumerate(tqdm(zip(dataset['npy_path'], dataset.index), total=len(dataset), desc='Generating X,Y data for final set')):
-        
-        try:
+    for path,labels in enumerate(tqdm(zip(dataset['npy_path'], dataset.index), total=len(dataset), desc='Generating X,Y data for final set')):
+
+
+        if os.path.exists(path):
+
             t_ = np.squeeze(NormalizeData(np.load(path)).astype(np.float32))
             if np.isnan(np.sum(t_)):
                 list_to_remove.append(labels)
@@ -146,55 +132,24 @@ def transform_final(dataset, name):
             else:
                 temp_data.append(t_)
         
-        except: 
-            list_to_remove.append(labels)
+        else: 
+            list_to_remove.append(labels)       
 
     labels = dataset[~dataset.index.isin(list_to_remove)].iloc[:,start_col:end_col]
 
-    np.save("/media/data1/anolin/split_smaller_for_ram/{}_Y.npy".format(name), labels.to_numpy())
+    if name == 'final':
+        np.save("/media/data1/anolin/split_smaller_for_ram/{}/{}_Y.npy".format(name,name), labels.to_numpy())
 
-    out_ = np.array(temp_data).astype(np.float32)
-    print('final shape {}'.format(out_.shape))
-    np.save("/media/data1/anolin/split_smaller_for_ram/{}_X.npy".format(name), out_)
+        out_ = np.array(temp_data).astype(np.float32)
+        print('final shape {}'.format(out_.shape))
+        np.save("/media/data1/anolin/split_smaller_for_ram/{}/{}_X.npy".format(name,name), out_)
 
+    else:
+        np.save("/media/data1/anolin/split_smaller_for_ram/split_{}/{}_Y.npy".format(split,name), labels.to_numpy())
 
-
-
-def transform(dataset, split, name):
-
-    try:
-        os.mkdir("/media/data1/anolin/split_smaller_for_ram/split_{}/{}".format(split,name))
-
-    except:
-        print('Try {}'.format("/media/data1/anolin/split_smaller_for_ram/split_{}/{}".format(split,name)))
-
-    start_col = 280
-    end_col = 357
-
-    temp_data = list()
-    list_to_remove = list()
-
-    for pos,(path,labels) in enumerate(tqdm(zip(dataset['npy_path'], dataset.index), total=len(dataset), desc='Generating X,Y data for {} set {}'.format(name,split))):
-        
-        try:
-            t_ = np.squeeze(NormalizeData(np.load(path)).astype(np.float32))
-            if np.isnan(np.sum(t_)):
-                list_to_remove.append(labels)
-
-            else:
-                temp_data.append(t_)
-        
-        except: 
-            list_to_remove.append(labels)
-
-    labels = dataset[~dataset.index.isin(list_to_remove)].iloc[:,start_col:end_col]
-
-    np.save("/media/data1/anolin/split_smaller_for_ram/split_{}/{}_Y.npy".format(split,name), labels.to_numpy())
-
-    out_ = np.array(temp_data).astype(np.float32)
-    print('final shape for split {} is {}'.format(split,out_.shape))
-    np.save("/media/data1/anolin/split_smaller_for_ram/split_{}/{}_X.npy".format(split,name), out_)
-
+        out_ = np.array(temp_data).astype(np.float32)
+        print('final shape {}'.format(out_.shape))
+        np.save("/media/data1/anolin/split_smaller_for_ram/split_{}/{}_X.npy".format(split,name), out_)
 
 import os
 from termcolor import colored
@@ -253,7 +208,7 @@ def generate_balanced_split(df,seed_list=[420,1997,2023],sex_groups=[35,65],num_
     X_data, X_final, y_data, y_final = multilabel_train_test_split(data_unique,to_balance,stratify=to_balance, test_size=0.30,random_state=int(8.30**2))
     X_final = regenerate_final(X_final, dict_observations_2, df)
     X_final.to_csv(os.path.join("/media/data1/anolin/split_smaller_for_ram",'X_final.csv'))
-    transform_final(X_final, 'final')
+    transform(X_final, 'final')
 
     to_balance = X_data[X_data.columns.tolist()[start_col:end_col+1] + ['SEX_BIN','AGE_BIN']]
 
@@ -280,9 +235,9 @@ def generate_balanced_split(df,seed_list=[420,1997,2023],sex_groups=[35,65],num_
 
         
         #generate the X data for each split, this is required to ensure no nan 
-        transform(X_train, pos, 'train')
-        transform(X_val, pos, 'val')
-        transform(X_test, pos, 'test')
+        transform(X_train, 'train', pos)
+        transform(X_val, 'val', pos)
+        transform(X_test, 'test', pos)
 
 
 generate_balanced_split(data) 
