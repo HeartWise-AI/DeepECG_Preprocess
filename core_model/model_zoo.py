@@ -27,7 +27,7 @@ import tensorflow_addons as tfa
 from tensorflow.keras.utils import Sequence
 from keras import backend as K
 from focal_loss import BinaryFocalLoss
-
+from tensorflow.keras.utils import Sequence
 
 tensorflow_version = float(tf.__version__[0:3])
 
@@ -103,11 +103,7 @@ print(colored('Main backbone'))
 # select a model to run
 sweep_configuration = init_wandb(prime_service)
 print(sweep_configuration)
-sweep_id = wandb.sweep(sweep=sweep_configuration, project=prime_service['run_name'])
-
-
-from tensorflow.keras.utils import Sequence
-import numpy as np   
+sweep_id = wandb.sweep(sweep=sweep_configuration, project=prime_service['run_name']) 
 
 class DataGenerator(Sequence):
     def __init__(self, x_set, y_set, batch_size):
@@ -132,14 +128,8 @@ def block_1_1(prime_service):
 
     run = wandb.init()
 
-    save_dict = {}
-
-    #load model
-    try:
+    if not os.path.exists(os.path.join(prime_service['save_dir'],wandb.config.models)):
         os.mkdir(os.path.join(prime_service['save_dir'],wandb.config.models))
-    except:
-        pass
-
 
     #load data
     loss = list()
@@ -161,12 +151,12 @@ def block_1_1(prime_service):
 
     for split in range(3):
 
+        save_dict = {}
+
         set_seeds(prime_service['three_seeds'][split])
-        try:
+        if not os.path.exists(os.path.join(prime_service['save_dir'],wandb.config.models,'split_{}'.format(split))):
             os.mkdir(os.path.join(prime_service['save_dir'],wandb.config.models,'split_{}'.format(split)))
-        except:
-            pass        
-        
+
         print('Currently running {} split {}'.format(wandb.config.models,split))
 
         loaded_architecture, _ = Classifiers.get(wandb.config.models)
@@ -177,10 +167,6 @@ def block_1_1(prime_service):
             weights=None,
             pooling='avg'
             )
-        #x = Flatten()(base.output)
-        #print(x)
-        #x = GlobalAveragePooling1D()(x)
-        print(base.output.shape)
         x = Dense(77, activation='sigmoid')(base.output)
         model = Model(inputs=base.inputs, outputs=x)
 
@@ -257,25 +243,19 @@ def block_1_1(prime_service):
     tf.keras.backend.clear_session()
     gc.collect()
 
-
-    print('Perfroances for {} were {} ± {}'.format(wandb.config.models,mean(list_of_metrics[3]), stdev(list_of_metrics[3])))
+    print('Perfroances for {} were {} ± {}'.format(wandb.config.models,mean(list_of_metrics[4]), stdev(list_of_metrics[4])))
 
     wandb.log({
     'model': wandb.config.models, 
-    'categorical_accuracy': mean(list_of_metrics[0]),
-    'binary_accuracy': mean(list_of_metrics[1]),
-    'AUC': mean(list_of_metrics[2]),
-    'PR': mean(list_of_metrics[3]),
-    'F1_micro':mean(list_of_metrics[4]),
-    'F1_macro':mean(list_of_metrics[5]),
-    'Sensitivity': mean(list_of_metrics[6]),
-    'Specificity': mean(list_of_metrics[7])})
-
-    print("adadwa")
-
-
-
-    
+    'loss': mean(list_of_metrics[0]),
+    'categorical_accuracy': mean(list_of_metrics[1]),
+    'binary_accuracy': mean(list_of_metrics[2]),
+    'AUC': mean(list_of_metrics[3]),
+    'PR': mean(list_of_metrics[4]),
+    'F1_micro':mean(list_of_metrics[5]),
+    'F1_macro':mean(list_of_metrics[6]),
+    'Sensitivity': mean(list_of_metrics[7]),
+    'Specificity': mean(list_of_metrics[8])})    
 
 wandb.agent(sweep_id, function=functools.partial(block_1_1,prime_service), count=len(prime_service['config']['models']))
 
