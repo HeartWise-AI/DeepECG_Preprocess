@@ -12,10 +12,7 @@ from sklearn.utils.validation import _num_samples
 from sklearn.model_selection._split import _validate_shuffle_split
 from itertools import chain
 import warnings
-import os
-from termcolor import colored
-
-
+import uuid
 pd.set_option('display.max_columns', None)
 
 dir = '/media/data1/ravram/DeepECG/ekg_waveforms_output/df_xml_2023_05_09_2004-to-june-2022_n_1572280_with_labelbox_no_duplicates.parquet'
@@ -23,6 +20,23 @@ data_ = pd.read_parquet(dir)
 data_['RestingECG_PatientDemographics_PatientID'] = [str(i).zfill(7) for i in data_['RestingECG_PatientDemographics_PatientID'].tolist()]
 data = data_.sort_values(by=['RestingECG_PatientDemographics_PatientID'])
 data = data[data.annotated != -1]
+
+from sklearn.model_selection import train_test_split
+from tqdm import tqdm
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
+from sklearn.utils import indexable, _safe_indexing
+from sklearn.utils.validation import _num_samples
+from sklearn.model_selection._split import _validate_shuffle_split
+from itertools import chain
+import warnings
+import tensorflow as tf
+import random, os
+import numpy as np
+
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -58,6 +72,17 @@ def multilabel_train_test_split(*arrays,
         )
     )
 
+def regenerate_final(final_data, dict_observations, original_dataframe):
+    list_to_fill_final = list()
+    index_final = final_data['RestingECG_PatientDemographics_PatientID'].tolist()
+
+    for pos in tqdm(index_final):
+        list_to_fill_final += dict_observations[pos]
+    
+    final_set = original_dataframe[original_dataframe.index.isin(list_to_fill_final)]
+
+    return final_set
+
 def regenerate_the_dataset(train_data, val_data, test_data, dict_observations, original_dataframe):
     list_to_fill_train = list()
     list_to_fill_val = list()
@@ -76,7 +101,6 @@ def regenerate_the_dataset(train_data, val_data, test_data, dict_observations, o
     for pos in tqdm(index_test):
         list_to_fill_test += dict_observations[pos]
 
-
     train_set = original_dataframe[original_dataframe.index.isin(list_to_fill_train)]
     val_set = original_dataframe[original_dataframe.index.isin(list_to_fill_val)]
     test_set = original_dataframe[original_dataframe.index.isin(list_to_fill_test)]
@@ -89,46 +113,93 @@ def adjust_private_variables_to_balance(df, sex_groups=[35,65]):
 
     return df
 
-
 def seed_everything(seed: int):
-    import random, os
-    import numpy as np
-    import torch
-    
+
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = True
+    tf.random.set_seed(seed)
 
-def transform(dataset, split, name,out_dir):
-
-    new_slides = list()
-    bad_pos = list()
-    for pos,i in enumerate(tqdm(dataset['npy_path'], total=len(dataset), desc='Generating X,Y data for split {}'.format(split))):
-        try:
-            new_slides.append(np.load(i)[1::5])
-        except:
-            bad_pos.append(pos)
-
-    t_ = np.array(new_slides)
+def NormalizeData(data):
+    return (data - np.min(data)) / (np.max(data) - np.min(data))
 
 
-    dataset = dataset.reset_index()
-    dataset = dataset[~dataset.index.isin(bad_pos)]
+def transform_final(dataset, name):
+    try:
+        os.mkdir("/media/data1/anolin/split_smaller_for_ram/{}".format(name))
+    except:
+        print('Try {}'.format("/media/data1/anolin/split_smaller_for_ram/{}".format(name)))
 
     start_col = 280
     end_col = 357
-    y = dataset[start_col:end_col+1].to_numpy()
+
+    temp_data = list()
+    list_to_remove = list()
+
+    for pos,(path,labels) in enumerate(tqdm(zip(dataset['npy_path'], dataset.index), total=len(dataset), desc='Generating X,Y data for final set')):
+        
+        try:
+            t_ = np.squeeze(NormalizeData(np.load(path)).astype(np.float32))
+            if np.isnan(np.sum(t_)):
+                list_to_remove.append(labels)
+
+            else:
+                temp_data.append(t_)
+        
+        except: 
+            list_to_remove.append(labels)
+
+    labels = dataset[~dataset.index.isin(list_to_remove)].iloc[:,start_col:end_col]
+
+    np.save("/media/data1/anolin/split_smaller_for_ram/{}_Y.npy".format(name), labels.to_numpy())
+
+    out_ = np.array(temp_data).astype(np.float32)
+    print('final shape {}'.format(out_.shape))
+    np.save("/media/data1/anolin/split_smaller_for_ram/{}_X.npy".format(name), out_)
 
 
-    np.save(out_dir,"split_{}/{}_X.npy".format(split,name),t_.astype(np.float32))
-    np.save(out_dir,"split_{}/{}_Y.npy".format(split,name),y.astype(np.float32))
 
 
-def generate_balanced_split(df,out_dir,seed_list=[420,1997,2023],sex_groups=[35,65],num_splits=3, notebook=True, outdir='/volume/core_model',**kwargs):
+def transform(dataset, split, name):
+
+    try:
+        os.mkdir("/media/data1/anolin/split_smaller_for_ram/split_{}/{}".format(split,name))
+
+    except:
+        print('Try {}'.format("/media/data1/anolin/split_smaller_for_ram/split_{}/{}".format(split,name)))
+
+    start_col = 280
+    end_col = 357
+
+    temp_data = list()
+    list_to_remove = list()
+
+    for pos,(path,labels) in enumerate(tqdm(zip(dataset['npy_path'], dataset.index), total=len(dataset), desc='Generating X,Y data for {} set {}'.format(name,split))):
+        
+        try:
+            t_ = np.squeeze(NormalizeData(np.load(path)).astype(np.float32))
+            if np.isnan(np.sum(t_)):
+                list_to_remove.append(labels)
+
+            else:
+                temp_data.append(t_)
+        
+        except: 
+            list_to_remove.append(labels)
+
+    labels = dataset[~dataset.index.isin(list_to_remove)].iloc[:,start_col:end_col]
+
+    np.save("/media/data1/anolin/split_smaller_for_ram/split_{}/{}_Y.npy".format(split,name), labels.to_numpy())
+
+    out_ = np.array(temp_data).astype(np.float32)
+    print('final shape for split {} is {}'.format(split,out_.shape))
+    np.save("/media/data1/anolin/split_smaller_for_ram/split_{}/{}_X.npy".format(split,name), out_)
+
+
+import os
+from termcolor import colored
+
+def generate_balanced_split(df,seed_list=[420,1997,2023],sex_groups=[35,65],num_splits=3, notebook=False, outdir='/volume/core_model',**kwargs):
 
     #make sure the progress bar is shown correctly
     if notebook == True:
@@ -178,34 +249,40 @@ def generate_balanced_split(df,out_dir,seed_list=[420,1997,2023],sex_groups=[35,
     start_col = 280
     end_col = 357
     to_balance = data_unique[data_unique.columns.tolist()[start_col:end_col+1] + ['SEX_BIN','AGE_BIN']]
-    
-    for pos,_ in enumerate(tqdm(range(num_splits), total=num_splits, desc='Generating splits')):
 
-        if pos != 0:
+    X_data, X_final, y_data, y_final = multilabel_train_test_split(data_unique,to_balance,stratify=to_balance, test_size=0.30,random_state=int(8.30**2))
+    X_final = regenerate_final(X_final, dict_observations_2, df)
+    X_final.to_csv(os.path.join("/media/data1/anolin/split_smaller_for_ram",'X_final.csv'))
+    transform_final(X_final, 'final')
 
-            try:
-                os.mkdir("/volume/core_model/data_split/split_{}".format(pos))
+    to_balance = X_data[X_data.columns.tolist()[start_col:end_col+1] + ['SEX_BIN','AGE_BIN']]
 
-            except:
-                print(colored("/volume/core_model/data_split/split_{}".format(pos), 'red'), 'already exists')
-                pass      
+    for pos in tqdm(range(num_splits), desc='Generating splits'):
+        
+        try:
+            os.mkdir("/media/data1/anolin/split_smaller_for_ram/split_{}".format(pos))
 
-            seed_everything(seed_list[pos])
+        except:
+            print(colored("/media/data1/anolin/split_smaller_for_ram/split_{}".format(pos), 'red'), 'already exists')
+            pass      
 
-            X_train, X_val_test, y_train, y_val_test = multilabel_train_test_split(data_unique,to_balance,stratify=to_balance, test_size=0.2, random_state=seed_list[pos])
-            X_val, X_test, y_val, y_test = multilabel_train_test_split(X_val_test,y_val_test,stratify=y_val_test, test_size=0.5, random_state=seed_list[pos])
-            X_train, X_val, X_test = regenerate_the_dataset(X_train, X_val, X_test, dict_observations_2, df)
+        seed_everything(seed_list[pos])
 
-            #save the files
-            X_train.to_csv(os.path.join(out_dir,"split_{}".format(pos),'X_train.csv'))
-            X_val.to_csv(os.path.join(out_dir,"split_{}".format(pos),'X_val.csv'))
-            X_test.to_csv(os.path.join(out_dir,"split_{}".format(pos),'X_test.csv'))
+        X_train, X_val_test, y_train, y_val_test = multilabel_train_test_split(X_data,to_balance,stratify=to_balance, test_size=0.15, random_state=seed_list[pos])
+        X_val, X_test, y_val, y_test = multilabel_train_test_split(X_val_test,y_val_test,stratify=y_val_test, test_size=0.66, random_state=seed_list[pos])
 
-            
-            #generate the X data for each split, this is required to ensure no nan 
-            transform(X_train, pos, 'train',out_dir)
-            transform(X_val, pos, 'val',out_dir)
-            transform(X_test, pos, 'test',out_dir)
+        X_train, X_val, X_test = regenerate_the_dataset(X_train, X_val, X_test, dict_observations_2, df)
 
-out_dir = '/volume/core_model/data_split/'
-generate_balanced_split(data, out_dir)
+        #save the files
+        X_train.to_csv(os.path.join("/media/data1/anolin/split_smaller_for_ram/split_{}".format(pos),'X_train.csv'))
+        X_val.to_csv(os.path.join("/media/data1/anolin/split_smaller_for_ram/split_{}".format(pos),'X_val.csv'))
+        X_test.to_csv(os.path.join("/media/data1/anolin/split_smaller_for_ram/split_{}".format(pos),'X_test.csv'))
+
+        
+        #generate the X data for each split, this is required to ensure no nan 
+        transform(X_train, pos, 'train')
+        transform(X_val, pos, 'val')
+        transform(X_test, pos, 'test')
+
+
+generate_balanced_split(data) 
