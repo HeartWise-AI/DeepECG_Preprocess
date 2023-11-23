@@ -1,4 +1,4 @@
-#similar to the wandb yaml with extra goodies 
+#similar to the wandb yaml with extra goodies
 
 #name the run, this will populate the seep
 run_name: "train run 1"
@@ -19,7 +19,7 @@ num_epochs: 100
 #how many blocks to run
 block_to_run: 1
 
-#bloc ordering 
+#bloc ordering
 bloc_order:
   - model
   - optimizer
@@ -84,20 +84,3 @@ config:
     - EfficientNetV2S
     - EfficientNetV2M
     - EfficientNetV2L
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
