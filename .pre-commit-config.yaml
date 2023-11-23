@@ -19,6 +19,14 @@ repos:
         args:
           - '--unsafe'
       - id: trailing-whitespace
+  - repo: local
+    hooks:
+      - id: jupyter-nb-clear-output
+        name: jupyter-nb-clear-output
+        files: \.ipynb$
+        stages: [commit]
+        language: system
+        entry: jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace
   - repo: 'https://github.com/asottile/pyupgrade'
     rev: v3.15.0
     hooks:
