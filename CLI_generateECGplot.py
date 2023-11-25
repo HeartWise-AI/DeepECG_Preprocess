@@ -6,14 +6,15 @@ import argparse
 import os
 import re
 
-import bwr
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
-import tqdm
 from pylab import rcParams
 from scipy.signal import butter, filtfilt
+from tqdm import tqdm  # Import tqdm correctly
+
+import bwr
 
 
 # argparse arguments
@@ -34,10 +35,16 @@ def get_arguments():
 
 
 def plot_a_lead(data_set, save_path, row_num=1):
+    file = np.load(data_set["ecg_output_path"].iloc[row_num])
+    file = np.reshape(file, (1, 2500, 12))
+    print(save_path)
+
     rcParams["figure.figsize"] = 30, 30
     rcParams["xtick.bottom"] = rcParams["xtick.labelbottom"] = False
     rcParams["ytick.left"] = rcParams["ytick.labelleft"] = False
 
+    # sample y to: 1 only allow 0.4 ms sampling rate
+    #             2 only plot 12 seconds of per lead
     # sample y to: 1 only allow 0.4 ms sampling rate
     #             2 only plot 12 seconds of per lead
 
@@ -57,7 +64,20 @@ def plot_a_lead(data_set, save_path, row_num=1):
         y = filtfilt(b, a, data)
         return y
 
-    lead_id_list = ["I", "II", "III", "V1", "V2", "V3", "V4", "V5", "V6", "aVL", "aVR", "aVF"]
+    lead_id_list = [
+        "I",
+        "II",
+        "III",
+        "aVL",
+        "aVR",
+        "aVF",
+        "V1",
+        "V2",
+        "V3",
+        "V4",
+        "V5",
+        "V6",
+    ]
 
     pannel_1_y = []
     pannel_2_y = []
@@ -65,14 +85,17 @@ def plot_a_lead(data_set, save_path, row_num=1):
     pannel_4_t = []
 
     lead_dict = dict(zip(lead_id_list, [[] for i in range(len(lead_id_list))]))
-
+    i = 0
     for lead in lead_id_list:
-        y = data_set[f"Lead_Wavform_1_ID_{lead}"].iloc[row_num]
+        y = file[0][:, i]
         if len(y) == 5000:
             # resample at half the rate
             y = y[1::2]  # sample half the points
 
-        lead_dict[lead] = list(bwr.bwr(butter_lowpass_filter(y, cutoff, fs, order))[1])
+        lead_dict[lead] = list(
+            y - bwr.calc_baseline(butter_lowpass_filter(y, cutoff, fs, order))[1]
+        )
+        i = i + 1
 
     # generate the lead activation
     activation = [0] * 5 + [10] * 50 + [0] * 5
@@ -178,6 +201,15 @@ def plot_a_lead(data_set, save_path, row_num=1):
                         break
         return string
 
+    print(
+        title_reshape(
+            re.sub(
+                r"\s\s+",
+                " ",
+                data_set["Diag"].iloc[row_num].replace("ECG anormal", "").replace(";", "\t"),
+            )
+        )
+    )
     ax.set_title(
         title_reshape(
             re.sub(
