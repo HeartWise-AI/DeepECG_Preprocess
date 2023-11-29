@@ -9,24 +9,18 @@ import pandas as pd
 def insert_newline(input_str, max_length):
     """
     Inserts a newline character at the specified maximum length in the input string.
-
     Parameters:
     - input_str (str): The input string.
     - max_length (int): The maximum number of characters before inserting a newline.
-
     Returns:
     - str: The modified string with newline characters.
     """
     if len(input_str) > max_length:
-        # Find the index to insert the newline character
         newline_index = max_length
         while newline_index < len(input_str) and input_str[newline_index] != " ":
             newline_index += 1
-
-        # Insert the newline character
         if newline_index < len(input_str):
             input_str = input_str[:newline_index] + "\n" + input_str[newline_index:]
-
     return input_str
 
 
@@ -35,36 +29,39 @@ def plot_from_parquet(
     patient_id=None,
     date=None,
     time=None,
-    plot_original_diagnosis=True,
+    diagnosis_column="diagnosis",
     index=None,
     save=False,
     anonym=True,
     out_dir="/volume",
 ):
     """
-    This function plots an EKF for a patient given a parquet it has two main setups
-
-    1. index selection
-        set an index in the parquet to plot, make sure to leave atient_id=None, date=None, time=None
-    2. selection by patient
-        set a patient id, date and time and will plot that ecg, let the index variable to none
-
+    Plots an EKG for a patient from a given parquet file. Supports two modes:
+    1. Index Selection: Set 'index' to plot from the parquet. Ensure 'patient_id', 'date', and 'time' are None.
+    2. Patient Selection: Set 'patient_id', 'date', and 'time' to plot a specific EKG. 'index' should be None.
     Parameters:
-    - parquet: parquet file
-    - patient_id: patient ID to plot
-    - date: date of the ECG
-    - time: time at which the ECG was acquired
-    - plot_original_diagnosis: plot the original diagnosis, if set to False will plot the diagnosis columns
-    - index: index in the parquet to plot
-    - save: to save the PNG
-    - anonym: to save the PNG anonymously
-    - out_dir: save directory
-
+    - parquet: Parquet file.
+    - patient_id: Patient ID (str).
+    - date: Date of ECG (str).
+    - time: Time of ECG (str).
+    - diagnosis_column: Name of the column containing the diagnosis (str).
+    - index: Index in parquet to plot (int).
+    - save: Saves PNG if True (bool).
+    - anonym: Saves PNG anonymously if True (bool).
+    - out_dir: Output directory for saving PNG (str).
     Returns:
-    - a png or shows the plot
+    - A PNG file or displays the plot.
     """
 
-    # assert isinstance(parquet, str),    'please input a parquet string'
+    # Validate input parameters
+    if index is None:
+        assert any(
+            [patient_id, date, time]
+        ), "Please select either index or patient_id, date, and time."
+    else:
+        assert all(
+            v is None for v in [patient_id, date, time]
+        ), "With index selected, patient_id, date, and time should be None."
 
     if index == None:
         assert any(
@@ -82,10 +79,7 @@ def plot_from_parquet(
         line = parquet.iloc[index]
         npy_path = line["npy_path"]
 
-        if plot_original_diagnosis == True:
-            title = line["original_diagnosis"]
-        else:
-            title = line["diagnosis"]
+        title = line[diagnosis_column]
 
         patient_id = line["RestingECG_PatientDemographics_PatientID"]
         date = line["RestingECG_TestDemographics_AcquisitionDate"]
