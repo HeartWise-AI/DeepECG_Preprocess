@@ -30,6 +30,7 @@ def plot_from_parquet(
     date=None,
     time=None,
     diagnosis_column="diagnosis",
+    patient_id_column="new_PatientID",
     index=None,
     save=False,
     anonym=True,
@@ -81,14 +82,12 @@ def plot_from_parquet(
 
         title = line[diagnosis_column]
 
-        patient_id = line["RestingECG_PatientDemographics_PatientID"]
+        patient_id = line[patient_id_column]
         date = line["RestingECG_TestDemographics_AcquisitionDate"]
         time = line["RestingECG_TestDemographics_AcquisitionTime"]
 
     else:
-        assert (
-            patient_id in parquet.RestingECG_PatientDemographics_PatientID.tolist()
-        ), "the patient ID doesn't exits"
+        assert patient_id in parquet.patient_id_column.tolist(), "the patient ID doesn't exits"
         assert (
             date in parquet.RestingECG_TestDemographics_AcquisitionDate.tolist()
         ), "the date doesn't seem to exist check you wrote it in format month-day-year"
@@ -97,7 +96,7 @@ def plot_from_parquet(
         ), "the time doesn't seem to exist"
 
         line = parquet[
-            (parquet.RestingECG_PatientDemographics_PatientID == patient_id)
+            (parquet.patient_id_column == patient_id)
             & (parquet.RestingECG_TestDemographics_AcquisitionDate == date)
             & (parquet.RestingECG_TestDemographics_AcquisitionTime == time)
         ]
