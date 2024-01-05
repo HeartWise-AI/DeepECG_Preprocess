@@ -55,6 +55,7 @@ class tinyxml2df:
         verbose: bool = True,
         save: bool = True,
     ):
+        # in_path can be either a string (path to directory) or a DataFrame
         self.path = in_path
         self.out_path = out_path
         self.verbose = verbose
@@ -246,32 +247,38 @@ class tinyxml2df:
         return data
 
     def read2flatten(self):
-        xml_dict_list = list()
-        path_list = list()
-        xml_list = list()
-        extracted = list()
-        npy_list = list()
-        dx_txt_list = list()
-        original_dx_txt_list = list()
+        # Initialization
+        xml_dict_list = []
+        path_list = []
+        xml_list = []
+        extracted = []
+        npy_list = []
+        dx_txt_list = []
+        original_dx_txt_list = []
 
-        # print(self.path)
-        # files_with_xml = self.path.apply(lambda path: [_ for _ in os.listdir(path) if _.endswith('.xml')]).sum()
-        ## Make directory self.out_path if it doesn't exist
         if not os.path.exists(self.out_path):
             os.makedirs(self.out_path)
         if not os.path.exists(os.path.join(self.out_path, "ecg_npy/")):
             os.makedirs(os.path.join(self.out_path, "ecg_npy/"))
-            print("Creating directory")
 
-        # iterate through all the files name verbose or not
-        # print("{} | Currently transforming {} xml files from dir {} into dict".format(datetime.now().strftime("%H:%M:%S"),len(files_with_xml),self.path))
-        list_files = os.listdir(self.path)
+        # Check if self.path is a DataFrame or string (path)
+        if isinstance(self.path, pd.DataFrame):
+            print("path is a dataframe")
+            file_paths = self.path["path"].tolist()
+        elif isinstance(self.path, str):
+            print("path is a directory")
+            file_paths = [
+                os.path.join(self.path, f) for f in os.listdir(self.path) if f.endswith(".xml")
+            ]
+        else:
+            raise ValueError("Invalid input type for in_path. Expected str or DataFrame.")
+
         for file_xml in tqdm(
-            list_files, total=len(list_files), desc="Transforming xml files into dict"
+            file_paths, total=len(file_paths), desc="Transforming xml files into dict"
         ):
-            # with open(os.path.join(self.path,file_xml), 'r') as xml:
-            with open(os.path.join(self.path, file_xml)) as xml:
-                path_list.append(os.path.join(self.path, file_xml))
+            with open(file_xml) as xml:  # file_xml already has the full path
+                path_list.append(file_xml)  # Directly append file_xml, which is the full path
+
                 # load
                 # *|MARKER_CURSOR|*
                 ECG_data_nested = xmltodict.parse(xml.read())
@@ -311,7 +318,8 @@ class tinyxml2df:
                     extracted.append("True")
                     npy_list.append(npy_extracted)
 
-                xml_list.append(os.path.join(self.path, file_xml))
+                # Append the file path directly without using os.path.join
+                xml_list.append(file_xml)
 
         df = pd.DataFrame(xml_dict_list)
         df["diagnosis"] = dx_txt_list

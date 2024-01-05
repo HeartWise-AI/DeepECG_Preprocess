@@ -1,4 +1,7 @@
 data/
 ekg_waveforms_ouput/
 ekg_JPEG/
-.csv
+examples_Tahsin/
+exercise/
+lqts_ecg/
+*.csv
