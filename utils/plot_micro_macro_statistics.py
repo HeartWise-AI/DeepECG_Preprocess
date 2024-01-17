@@ -218,14 +218,14 @@ def compute_individual_metrics(merged_df, new_label_names):
         cardiologist_col = label + "_CARDIOLOGIST"
         muse_col = label + "_MUSE"
 
-        if cardiologist_col in df_merged.columns and muse_col in df_merged.columns:
+        if cardiologist_col in merged_df.columns and muse_col in merged_df.columns:
             print(f"Computing metrics for {label}")
             metrics_results[label] = {"_CARDIOLOGIST": {}, "_MUSE": {}}
 
             for suffix in ["_CARDIOLOGIST", "_MUSE"]:
                 col_name = label + suffix
-                y_true = df_merged[label]
-                y_score = df_merged[col_name]
+                y_true = merged_df[label]
+                y_score = merged_df[col_name]
 
                 # Check if both classes are present
                 if np.unique(y_true).size > 1 and np.unique(y_score).size > 1:
