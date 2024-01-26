@@ -697,8 +697,12 @@ def main():
                 if mean(val_steps_loss) < beat_val_loss:
                     print(f'Saving model {mean(val_steps_loss)} bettter than {beat_val_loss}')
                     if pipeline_parameters['clean_dir']:
-                        for f in glob.glob(os.path.join(pipeline_parameters['save_dir'],pipeline_parameters['name'],encoded)):
-                            os.remove(f)
+                        for f in glob.glob(os.path.join(pipeline_parameters['save_dir'],pipeline_parameters['name'],encoded,'*')):
+                            try:
+                                if os.path.isfile(f):  # Ensure it's a file, not a directory
+                                    os.remove(f)
+                            except:
+                                pass
                     torch.save(model, os.path.join(pipeline_parameters['save_dir'],pipeline_parameters['name'],encoded,f'{pipeline_parameters["model_to_run"]}_{mean(val_steps_loss)}_{wandb.config.loss}_{epoch}.h5'))
                     beat_val_loss = mean(val_steps_loss)
 
