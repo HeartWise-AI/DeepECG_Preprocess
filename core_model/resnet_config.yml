@@ -1,0 +1,18 @@
+#config for resnet
+
+#shouln't change
+channels: 12
+out_neurons: 77
+
+#can change
+architecture: ['resnet18','resnet34', 'resnet50', 'resnet101', 'resnet152', 'resnet200']
+activation: ['leaky_relu','gelu','selu','mish','swish']
+dropout: [0.0, 0.5] #two values to allow continuous
+use_batchnorm_padding_before_conv1: [False] #according to https://github.com/ZFTurbo/classification_models_1D/blob/main/classification_models_1D/models/resnet.py
+use_padding_pooling_after_conv1: [False] #according to https://github.com/ZFTurbo/classification_models_1D/blob/main/classification_models_1D/models/resnet.py
+stochastic_depth: [0.0, 0.5] #two values to allow continuous #https://arxiv.org/pdf/1603.09382.pdf
+kernel_sizes:  ['[83, 7, 7, 5, 5]', '[69, 7, 7, 5, 5]','[49, 7, 7, 5, 5]','[37, 7, 7, 5, 5]','[27, 7, 7, 5, 5]','[17, 7, 7, 5, 5]', '[7, 7, 7, 5, 5]', '[83, 21, 7, 5, 5]', '[69, 21, 7, 5, 5]','[49, 21, 7, 5, 5]','[37, 21, 7, 5, 5]','[27, 21, 7, 5, 5]','[17, 7, 7, 5, 5]', '[7, 7, 7, 5, 5]'] # Custom kernel sizes for each stage #according to https://github.com/ZFTurbo/classification_models_1D/blob/main/classification_models_1D/models/resnet.py
+strides: ['[2, 2, 2, 2, 2]']
+model_width: [1,2,3]
+use_bias: [False]
+ 
