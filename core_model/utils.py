@@ -21,7 +21,7 @@ from tqdm.contrib import tzip
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+import copy
 ###################
 # Label smoothing #
 ###################
@@ -1279,7 +1279,7 @@ class MyCustomDataset(Dataset):
     def __getitem__(self, idx):
         x = self.data[idx]
         y = self.labels[idx]
-        #x = np.swapaxes(x, -2, -1)
+        #x = np.swapaxes(x, 0, 1)
         return x, y
     
 
@@ -1297,7 +1297,7 @@ class ECGDataset(Dataset):
     def __getitem__(self, index):
         x = self.data[index]
         y = self.targets[index]       
-        return x.astype(np.float32), y.astype(np.float32)
+        return np.swapaxes(x.astype(np.float32), -1,-2), y.astype(np.float32)
     
     def __len__(self):
         return len(self.data)
@@ -1314,6 +1314,7 @@ def set_seed(seed):
     Parameters:
     - seed (int): Seed value for reproducibility.
     """
+    
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     random.seed(seed)
@@ -1359,3 +1360,42 @@ def filtering(data, name, lowcut, highcut,fs=250, order=2):
 
     # Reassemble the results
     return np.concatenate(results, axis=0)
+
+
+import copy
+import torch
+import copy
+import torch
+
+import copy
+import torch
+
+class EMAWeightUpdater:
+    def __init__(self, model, decay):
+        self.model = model
+        self.decay = decay
+        self.shadow_params = copy.deepcopy(model.state_dict())
+
+    def update(self):
+        model_params = self.model.state_dict()
+        
+        # Update shadow parameters with EMA formula
+        with torch.no_grad():
+            for name, param in model_params.items():
+                if param.dtype.is_floating_point:
+                    if name not in self.shadow_params:
+                        self.shadow_params[name] = param.clone()
+                    else:
+                        shadow_param = self.shadow_params[name]
+                        new_value = param * (1.0 - self.decay) + shadow_param * self.decay
+                        self.shadow_params[name].copy_(new_value)
+
+    def apply_shadow(self):
+        original_state_dict = self.model.state_dict()
+        self.model.load_state_dict(self.shadow_params, strict=True)
+        return original_state_dict
+
+    def restore_original(self, original_state_dict):
+        self.model.load_state_dict(original_state_dict)
+
+
