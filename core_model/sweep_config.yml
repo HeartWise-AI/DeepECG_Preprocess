@@ -1,20 +1,16 @@
 # run name
-"name": "resnet_architecture_optimization"
+"name": "vit_pytorch"
 #optimizing method
 "method": "bayes" #choice between bayes, random and grid
 #optimization goal
-"metric": {"name": "val_MultilabelAUPRC_macro", "goal": "maximize"}
+"metric": {"name": "best_val_MultilabelAUPRC_macro", "goal": "maximize"}
 
 
 #the first step allow multiple data transformation
-clean_dir: True
-
-
-use_pretrained: False
-path_pretrained: ''
 
 #put the data
-main_path: '/media/datasets/anolin/'
+model_type: 'efficientnet' #resnet, vit_1d
+main_path: '/media/datasets/anolin'
 
 # untransformed, min_max_leads, quantiletransformernormal_leads_div
 
@@ -34,38 +30,41 @@ clean_labels: True
 labels_to_remove: ['ST depression (posterior - V7-V8-V9)','Tall >2.5 mm', 'J wave', 'Auricular bigeminy', 'Ventricular bigeminy', 'Sinus Pause', 'Dextrocardia', 'Hyperacute T wave (lateral, V5-V6)', 'Hyperacute T wave (septal, V1-V2)', 'Hyperacute T wave (anterior, V3-V4)', 'Bifid', 'RaVL + SV3 > 28 mm (H) or 20 mm (F)', 'Large >0.08 s', 'Biphasic', 'ST depression et T inversion in V5 or V6']
 
 #augment
-augment: [0.25,0.00]
-function: ['window_warp_multithreaded','magnitude_warp_uniform_multithreaded','beat_permutation'] #,'scaling','jitter']
+augment: [0.5,0.00]
+function: ['window_warp_multithreaded','window_slice_multithreaded','time_warp_multithreaded','magnitude_warp_uniform_multithreaded','beat_permutation','scaling','jitter']
 
 #check the dataset for common  errrors
 validate_dataset: False
 expected_X_shape: [2500,12]
 
+use_pretrained: False
+clean_dir: True 
+
 seed: [42]
 
 #GPU to use, on 229 there are 4 - ID [0,1,2,3]
-gpu_to_use: [2]
-save_dir: 'media/datasets/anolin/resnet_output' 
+gpu_to_use: [0]
+save_dir: '/media/data1/anolin/efficientnet_output' 
 
 #general optimisation parameters
-lr: [0.001,0.00000001]
-scheduler: ['step']
-optimiser: ['Radam', 'SGD', 'Adam']
-activation: ['relu'] #,'leaky_relu','gelu','selu','mish','swish']
-num_max_epochs: [50]
-use_EMA: [True]
-apply_label_smoothing: [True]
+lr: [0.001,0.000000001]
+scheduler: ['by_plateau', 'cosine_annealing', 'lambda', 'none', 'triangular2'] #triangular2'
+optimiser: ['Radam', 'Adam', 'SGD', 'Lion', 'RMSPROP', 'AdamW']
+activation: ['relu','leaky_relu','gelu','selu','mish','swish']
+num_max_epochs: [25]
+ema_value: [0.9999999, 0.80]
+apply_label_smoothing: [False, True]
 label_smoothing_factor: [0.000001,0.0] #
 #rand_augment: [False] #not implemented yet, keep to false
-stochastic_depth: [0.1,0.0]
-weight_decay: [0.1, 0.000000001] #[0.1,0.0000001]
-dropout: [0.0,0.5]
-batch_size: [512,646,780,812,914,1048] #[128,218,512,1048]
+stochastic_depth: [0.5,0.0]
+weight_decay: [0.01, 0.0000001] #[0.1,0.0000001]
+dropout: [0.0, 0.5]
+batch_size: [512,646,780,812,914,1048,1218,1556,2048] 
 out_neurons: [77]
 out_activation: ['sigmoid']
-use_adaptive_clipping: [False, True]
+use_adaptive_clipping: [True, False]
 use_warmup: [True, False]
-loss: ['asymmetric_loss']
+loss: ['binary_ce','binary_focalloss_2','binary_focalloss_3','TwoWayLoss','Hill','asymmetric_loss','SPLC','MultiLabelSoftMarginLoss']
 
 
 #TODO add
@@ -79,4 +78,5 @@ log_wandb_performance: True
 
 
 #model to run, this will fetch the appropriate model config
-model_to_run: 'pytorch_resnet' # pytorch_resnet
+model_to_run: 'pytorch_efficientnet' # pytorch_resnet
+
