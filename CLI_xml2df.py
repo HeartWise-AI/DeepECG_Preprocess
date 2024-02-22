@@ -266,10 +266,18 @@ class tinyxml2df:
             print("path is a dataframe")
             file_paths = self.path["path"].tolist()
         elif isinstance(self.path, str):
-            print("path is a directory")
-            file_paths = [
-                os.path.join(self.path, f) for f in os.listdir(self.path) if f.endswith(".xml")
-            ]
+            if os.path.isdir(self.path):
+                print("path is a directory")
+                file_paths = [
+                    os.path.join(self.path, f)
+                    for f in os.listdir(self.path)
+                    if f.endswith(".xml")
+                ]
+            elif os.path.isfile(self.path) and self.path.endswith(".xml"):
+                print("path is an XML file")
+                file_paths = [self.path]
+            else:
+                raise ValueError("Path must be a directory or an XML file.")
         else:
             raise ValueError("Invalid input type for in_path. Expected str or DataFrame.")
 
