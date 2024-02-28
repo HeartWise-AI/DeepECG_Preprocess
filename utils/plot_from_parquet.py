@@ -31,6 +31,7 @@ def plot_from_parquet(
     time=None,
     diagnosis_column="diagnosis",
     patient_id_column="new_PatientID",
+    subtitle_column=None,
     index=None,
     save=False,
     anonym=True,
@@ -102,22 +103,29 @@ def plot_from_parquet(
         ]
 
         if len(line) > 1:
-            print("WARNING: more that one match: taking the first one")
+            print("WARNING: more than one match: taking the first one")
             line = line.iloc[0]
             npy_path = line["npy_path"]
             print(npy_path)
 
-            if plot_original_diagnosis == True:
-                title = line["original_diagnosis"]
-            else:
-                title = line["diagnosis"].tolist()
+            title = (
+                line["original_diagnosis"]
+                if plot_original_diagnosis
+                else line["diagnosis"].tolist()
+            )
 
         else:
             npy_path = line["npy_path"].tolist()[0]
-            if plot_original_diagnosis == True:
-                title = line["original_diagnosis"].tolist()[0]
-            else:
-                title = line["diagnosis"].tolist()[0]
+            title = (
+                line["original_diagnosis"].tolist()[0]
+                if plot_original_diagnosis
+                else line["diagnosis"].tolist()[0]
+            )
+
+        # Support for subtitle_text as title
+    if subtitle_column:
+        subtitle_text = line[subtitle_column]
+        title += f" - {subtitle_text}"
 
     print(f"Plotting ID {patient_id} at {date} {time}")
 
