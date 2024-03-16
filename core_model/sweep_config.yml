@@ -1,16 +1,16 @@
 # run name
-"name": "resnet_pytorch"
+"name": "vit_pytorch"
 #optimizing method
 "method": "bayes" #choice between bayes, random and grid
 #optimization goal
-"metric": {"name": "best_val_MultilabelAUPRC_macro", "goal": "maximize"} ---> choose the best 
+"metric": {"name": "best_val_MultilabelAUPRC_macro", "goal": "maximize"}
 
 
 #the first step allow multiple data transformation
 
 #put the data
-model_type: resnet, #vit_1d efficientnet
-main_path:  /mnt/data1/tahmed/
+model_type: 'efficientnet' #resnet, vit_1d
+main_path: '/media/datasets/anolin'
 
 # untransformed, min_max_leads, quantiletransformernormal_leads_div
 
@@ -43,8 +43,8 @@ clean_dir: True
 seed: [42]
 
 #GPU to use, on 229 there are 4 - ID [0,1,2,3]
-gpu_to_use: [2]
-save_dir: '/volume/DeepACS_runs/resnet_pytorch' 
+gpu_to_use: [0]
+save_dir: '/media/data1/anolin/efficientnet_output' 
 
 #general optimisation parameters
 lr: [0.001,0.000000001]
@@ -59,8 +59,8 @@ label_smoothing_factor: [0.000001,0.0] #
 stochastic_depth: [0.5,0.0]
 weight_decay: [0.01, 0.0000001] #[0.1,0.0000001]
 dropout: [0.0, 0.5]
-batch_size: [128,256,512,646,780,812,914,1048,1218,1556,2048] 
-out_neurons: [1]
+batch_size: [512,646,780,812,914,1048,1218,1556,2048] 
+out_neurons: [77]
 out_activation: ['sigmoid']
 use_adaptive_clipping: [True, False]
 use_warmup: [True, False]
@@ -78,5 +78,5 @@ log_wandb_performance: True
 
 
 #model to run, this will fetch the appropriate model config
-model_to_run: pytorch_resnet #'pytorch_efficientnet' 
+model_to_run: 'pytorch_efficientnet' # pytorch_resnet
 

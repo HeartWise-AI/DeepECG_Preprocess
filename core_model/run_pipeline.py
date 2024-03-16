@@ -142,8 +142,7 @@ def init_wandb():
 
     return config
 
-
-def hash_string(input_string): #smart way to encode strings 
+def hash_string(input_string):
     return hashlib.sha256(input_string.encode()).hexdigest()
 
 def convert_to_two_var(config_var):
