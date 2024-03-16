@@ -7,6 +7,7 @@ import torch.nn.init as init
 # Configuration for different ResNet architectures
 resnet_configs = {
     'resnet18': {'block_channels': [64, 64, 128, 256, 512], 'num_blocks': [2, 2, 2, 2]},
+    'resnet18_ECG': { 'block_channels': [64, 1024, 256, 64, 16], 'num_blocks': [2, 2, 2, 2]},
     'resnet34': {'block_channels': [64, 64, 128, 256, 512], 'num_blocks': [3, 4, 6, 3]},
     'resnet50': {'block_channels': [64, 256, 512, 1024, 2048], 'num_blocks': [3, 4, 6, 3]},
     'resnet101': {'block_channels': [64, 256, 512, 1024, 2048], 'num_blocks': [3, 4, 23, 3]},
@@ -17,6 +18,14 @@ resnet_configs = {
 
 
 class EMA:
+    """
+    Exponential Moving Average (EMA) class for model parameters.
+
+    Args:
+        model (nn.Module): The model whose parameters will be averaged.
+        decay (float, optional): The decay rate for the moving average. Defaults to 0.999.
+    """
+
     def __init__(self, model, decay=0.999):
         self.model = model
         self.decay = decay
@@ -24,17 +33,30 @@ class EMA:
         self.register()
 
     def register(self):
+        """
+        Register the model's parameters for EMA.
+        """
         for name, param in self.model.named_parameters():
             if param.requires_grad:
                 self.shadow[name] = param.data.clone()
 
     def update(self):
+        """
+        Update the EMA shadow parameters based on the current model parameters.
+        """
         for name, param in self.model.named_parameters():
             if param.requires_grad:
                 self.shadow[name] = self.decay * self.shadow[name] + (1.0 - self.decay) * param.data
 
 
 class Mish(nn.Module):
+    """
+    The Mish activation function.
+    
+    Mish is a non-linear activation function that is known to perform well in deep learning models.
+    It is defined as the element-wise multiplication of the input with the hyperbolic tangent of the softplus function.
+    """
+
     def __init__(self):
         super(Mish, self).__init__()
 
@@ -49,6 +71,21 @@ class Swish(nn.Module):
         return x * torch.sigmoid(x)
 
 class ResNetBlock(nn.Module):
+    """
+    Residual Network (ResNet) block implementation.
+
+    Args:
+        model (str): The ResNet model type.
+        in_channels (int): Number of input channels.
+        out_channels (int): Number of output channels.
+        kernel_size (int): Size of the convolutional kernel. Default is 3.
+        stride (int): Stride value for the convolutional layers. Default is 1.
+        activation (str): Activation function to use. Default is 'relu'.
+        dropout (float): Dropout probability. Default is 0.0.
+        stochastic_depth (float): Probability of skipping the block during training. Default is 0.0.
+        use_bias (bool): Whether to use bias in the convolutional layers. Default is True.
+    """
+
     def __init__(self, model, in_channels, out_channels, kernel_size=3, stride=1, activation='relu',
                  dropout=0.0, stochastic_depth=0.0, use_bias=True):
         super(ResNetBlock, self).__init__()
@@ -107,6 +144,15 @@ class ResNetBlock(nn.Module):
             raise ValueError(f"Activation function '{activation}' not supported.")
 
     def forward(self, x):
+        """
+        Forward pass of the ResNetBlock.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Output tensor.
+        """
         identity = self.shortcut(x)
 
         if self.training and self.stochastic_depth > 0.0:
@@ -135,6 +181,46 @@ class ResNetBlock(nn.Module):
 
 
 class ResNet1D(nn.Module):
+    """
+    ResNet1D is a 1D convolutional neural network model based on the ResNet architecture.
+
+    Args:
+        input_channels (int): Number of input channels.
+        architecture (str): ResNet architecture type (default: 'resnet18').
+        activation (str): Activation function to use (default: 'relu').
+        dropout (float): Dropout probability (default: 0.0).
+        use_batchnorm_padding_before_conv1 (bool): Whether to use batch normalization and padding before the first convolutional layer (default: False).
+        use_padding_pooling_after_conv1 (bool): Whether to use padding and pooling after the first convolutional layer (default: False).
+        stochastic_depth (float): Stochastic depth probability (default: 0.0).
+        kernel_sizes (list): List of kernel sizes for each convolutional layer (default: None).
+        strides (list): List of stride values for each convolutional layer (default: None).
+        use_bias (bool): Whether to use bias in convolutional layers (default: True).
+        out_neurons (int): Number of output neurons (default: 92).
+        out_activation (str): Activation function for the final layer (default: 'sigmoid').
+        model_width (int): Width multiplier for the model (default: 1).
+        use_ema (bool): Whether to use exponential moving average (EMA) for model parameters (default: True).
+        **kwargs: Additional keyword arguments to configure the ResNet architecture.
+
+    Attributes:
+        conv1 (nn.Conv1d): First convolutional layer.
+        bn1 (nn.BatchNorm1d): Batch normalization layer after the first convolutional layer.
+        activation (nn.Module): Activation function.
+        dropout (nn.Dropout): Dropout layer.
+        blocks (nn.Sequential): Sequence of ResNet blocks.
+        final_layer (nn.Linear): Final fully connected layer.
+        final_activation (nn.Module): Activation function for the final layer.
+        ema (EMA): Exponential moving average for model parameters.
+
+    Methods:
+        forward(x): Forward pass of the model.
+        apply_ema(): Update EMA parameters after each training step.
+        set_to_eval_mode(): Set the model to evaluation mode using EMA parameters.
+        set_to_train_mode(): Set the model back to training mode.
+    """
+    # Rest of the code...
+class ResNet1D(nn.Module):
+
+
     def __init__(self, input_channels, architecture='resnet18', activation='relu', dropout=0.0,
                  use_batchnorm_padding_before_conv1=False, use_padding_pooling_after_conv1=False,
                  stochastic_depth=0.0, kernel_sizes=None, strides=None, use_bias=True, out_neurons=92,out_activation='sigmoid',model_width=1, use_ema=True, **kwargs):
@@ -218,37 +304,56 @@ class ResNet1D(nn.Module):
             raise ValueError(f"Activation function '{activation}' not supported.")
 
     def forward(self, x):
-        if hasattr(self, 'bn_padding') and hasattr(self, 'zero_padding_before_conv1'):
-            x = self.bn_padding(x)
-            x = self.zero_padding_before_conv1(x)
+            """
+            Forward pass of the ResNet model.
 
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.activation(x)
-        x = self.dropout(x)
+            Args:
+                x (torch.Tensor): Input tensor.
 
-        if hasattr(self, 'zero_padding_after_conv1') and hasattr(self, 'pooling_after_conv1'):
-            x = self.zero_padding_after_conv1(x)
-            x = self.pooling_after_conv1(x)
+            Returns:
+                torch.Tensor: Output tensor.
+            """
+            if hasattr(self, 'bn_padding') and hasattr(self, 'zero_padding_before_conv1'):
+                x = self.bn_padding(x)
+                x = self.zero_padding_before_conv1(x)
 
-        x = self.blocks(x)
+            x = self.conv1(x)
+            x = self.bn1(x)
+            x = self.activation(x)
+            x = self.dropout(x)
 
-        if hasattr(self, 'final_layer'):
-            x = x.mean(dim=-1)  # Global average pooling
-            x = self.final_layer(x)
-            #if hasattr(self, 'final_activation'):
-                #x = self.final_activation(x)
-        return x
+            if hasattr(self, 'zero_padding_after_conv1') and hasattr(self, 'pooling_after_conv1'):
+                x = self.zero_padding_after_conv1(x)
+                x = self.pooling_after_conv1(x)
+
+            x = self.blocks(x)
+
+            if hasattr(self, 'final_layer'):
+                x = x.mean(dim=-1)  # Global average pooling
+                x = self.final_layer(x)
+                #if hasattr(self, 'final_activation'):
+                    #x = self.final_activation(x)
+            return x
 
     def apply_ema(self):
+        """
+        Applies Exponential Moving Average (EMA) to update the model parameters after each training step.
+        """
         # Update EMA parameters after each training step
         self.ema.update()
 
     def set_to_eval_mode(self):
-        # Set the model to evaluation mode using EMA parameters
-        for name, param in self.named_parameters():
-            if param.requires_grad:
-                param.data = self.ema.shadow[name]
+            """
+            Sets the model to evaluation mode using EMA parameters.
+            
+            This method sets the model to evaluation mode by updating the model's parameters
+            with the exponential moving average (EMA) parameters.
+            """
+            
+            # Set the model to evaluation mode using EMA parameters
+            for name, param in self.named_parameters():
+                if param.requires_grad:
+                    param.data = self.ema.shadow[name]
 
     def set_to_train_mode(self):
         # Set the model back to training mode
@@ -257,18 +362,39 @@ class ResNet1D(nn.Module):
 # TODO
 # allow 2d and max vs avg pool
 
-"""
-model = ResNet1D(
-    input_channels=12,
-    architecture='resnet18',
-    activation='relu',
-    dropout=0.2,
-    use_batchnorm_padding_before_conv1=True,
-    use_padding_pooling_after_conv1=True,
-    stochastic_depth=0.0,
-    kernel_sizes=[49, 7, 7, 5, 3],  # Custom kernel sizes for each stage
-    strides=[2, 2, 2, 2, 2],  # Custom strides for each stage
-    use_bias=True,
-    use_2d = False
-)
-"""
+
+
+if __name__ == "__main__":
+    # model = ResNet1D(
+    #     input_channels=12,
+    #     architecture='resnet18',
+    #     activation='relu',
+    #     dropout=0.8,
+    #     use_batchnorm_padding_before_conv1=True,
+    #     use_padding_pooling_after_conv1=True,
+    #     stochastic_depth=0.0,
+    #     kernel_sizes=[49, 7, 7, 5, 3],  # Custom kernel sizes for each stage
+    #     strides=[2, 2, 2, 2, 2],  # Custom strides for each stage
+    #     use_bias=True,
+    #     use_2d = False,
+    #     out_neurons=1,
+    # )
+    
+    
+    model = ResNet1D(
+        input_channels=12,
+        architecture='resnet18_ECG',
+        activation='relu',
+        dropout=0.8,
+        use_batchnorm_padding_before_conv1=True,
+        use_padding_pooling_after_conv1=True,
+        stochastic_depth=0.0,
+        kernel_sizes=[16, 16, 16, 16, 16],  # Custom kernel sizes for each stage
+        strides=[1, 1, 1, 1, 1],  # Custom strides for each stage
+        use_bias=False,
+        use_2d = False,
+        out_neurons=1,)
+    
+    print(model)
+    
+    

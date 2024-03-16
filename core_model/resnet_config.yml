@@ -2,7 +2,7 @@
 
 #shouln't change
 channels: 12
-out_neurons: 77
+out_neurons: 1
 
 #can change
 architecture: ['resnet18','resnet34', 'resnet50', 'resnet101', 'resnet152', 'resnet200']
@@ -15,4 +15,7 @@ kernel_sizes:  ['[83, 7, 7, 5, 5]', '[69, 7, 7, 5, 5]','[49, 7, 7, 5, 5]','[37, 
 strides: ['[2, 2, 2, 2, 2]']
 model_width: [1,2,3]
 use_bias: [False]
+ 
+#why does it have this many configuration?
+#width --->more #number of kernal
  
