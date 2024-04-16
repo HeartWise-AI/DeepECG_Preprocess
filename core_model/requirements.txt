@@ -11,3 +11,5 @@ glob2
 autoclip
 termcolor
 lion-pytorch
+dataclasses
+typing
