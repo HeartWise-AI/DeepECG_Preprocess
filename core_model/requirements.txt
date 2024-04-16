@@ -1,0 +1,13 @@
+torch
+numpy
+pyyaml
+torchmetrics
+torcheval
+statistics
+pytorch_warmup
+wandb
+hashlib
+glob2
+autoclip
+termcolor
+lion-pytorch
