@@ -188,7 +188,7 @@ def load_numpy_array(filepath):
 def init_wandb():
 
     #load the sweep config
-    dict_yaml =load_config('sweep_config_2.yml')
+    dict_yaml = load_config('sweep_config.yml')
 
     ###################################
     # General optimisation parameters #
