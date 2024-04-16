@@ -22,23 +22,29 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import copy
+from numpy.lib.format import read_magic, _read_array_header
+
 ###################
 # Label smoothing #
 ###################
 
-def label_smooth(targets, epsilon=0.1):
-    # Assuming targets is a binary matrix of shape [batch_size, num_classes]
-
-    # Smoothing the labels
-    # For positive labels (1's), they become (1 - epsilon)
-    # For negative labels (0's), they become epsilon
-    return targets * (1 - epsilon) + (1 - targets) * epsilon
-
+def smooth_labels(labels, smoothing=0.1):
+    """
+    Apply label smoothing.
+    :param labels: Original labels.
+    :param smoothing: Label smoothing factor.
+    """
+    with torch.no_grad():
+        num_classes = labels.shape[1]
+        labels = labels * (1 - smoothing) + (smoothing / num_classes)
+    return labels
 
 
 ########
 # LOSS #
 ########
+
+# multilabel
 
 class Hill(nn.Module):
     r""" Hill as described in the paper "Robust Loss Design for Multi-Label Learning with Missing Labels "
@@ -101,7 +107,6 @@ class Hill(nn.Module):
             return loss.sum()
         else:
             return loss
-
 
 class SPLC(nn.Module):
     r""" SPLC loss as described in the paper "Simple Loss Design for Multi-Label Learning with Missing Labels "
@@ -186,7 +191,6 @@ class SPLC(nn.Module):
         else:
             return loss
 
-
 class AsymmetricLoss(nn.Module):
     def __init__(self, gamma_neg=4, gamma_pos=1, clip=0.05, eps=1e-8, disable_torch_grad_focal_loss=True):
         super(AsymmetricLoss, self).__init__()
@@ -233,7 +237,6 @@ class AsymmetricLoss(nn.Module):
             loss *= one_sided_w
 
         return -loss.sum()
-
 
 class AsymmetricLossOptimized(nn.Module):
     ''' Notice - optimized version, minimizes memory allocation and gpu uploading,
@@ -288,7 +291,6 @@ class AsymmetricLossOptimized(nn.Module):
 
         return -self.loss.sum()
 
-
 def calculate_class_weights(one_hot_labels):
     """
     Calculate class weights based on the frequency of each class in the one-hot encoded labels.
@@ -329,7 +331,6 @@ class WeightedMultilabelBCELoss(nn.Module):
 
         return loss
 
-
 class BCEWithLogitsLossWithLabelSmoothing(torch.nn.Module):
     def __init__(self, label_smoothing=0.0, pos_weight=None, reduction='mean'):
         super(BCEWithLogitsLossWithLabelSmoothing, self).__init__()
@@ -346,9 +347,6 @@ class BCEWithLogitsLossWithLabelSmoothing(torch.nn.Module):
             loss = F.binary_cross_entropy_with_logits(input, target_smooth, reduction=self.reduction)
         
         return loss
-
-
-
 
 class FocalLoss(nn.Module):
     def __init__(self, alpha=0.25, gamma=2, reduction='mean'):
@@ -381,7 +379,6 @@ class FocalLoss(nn.Module):
         else:
             return focal_loss
 
-
 nINF = -100
 class TwoWayLoss(nn.Module):
 
@@ -405,7 +402,6 @@ class TwoWayLoss(nn.Module):
 
         return torch.nn.functional.softplus(nlogit_class + plogit_class).mean() + \
                 torch.nn.functional.softplus(nlogit_sample + plogit_sample).mean()
-
 
 class BinaryFocalLossWithLogits(nn.Module):
     def __init__(self, alpha=0.25, gamma=2.0, reduction='mean'):
@@ -448,6 +444,79 @@ class BinaryFocalLossWithLogits(nn.Module):
             return torch.sum(focal_loss)
         else:
             return focal_loss
+
+
+#multiclass
+
+class FocalLossMulticlass(nn.Module):
+    def __init__(self, alpha=0.25, gamma=2.0, reduction='mean'):
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.reduction = reduction
+
+    def forward(self, inputs, targets):
+        BCE_loss = F.cross_entropy(inputs, targets, reduction='none')
+        pt = torch.exp(-BCE_loss)
+        F_loss = self.alpha * (1-pt)**self.gamma * BCE_loss
+
+        if self.reduction == 'mean':
+            return torch.mean(F_loss)
+        elif self.reduction == 'sum':
+            return torch.sum(F_loss)
+        else:
+            return F_loss
+
+class DiceLoss(nn.Module):
+    def __init__(self, smooth=1.):
+        super(DiceLoss, self).__init__()
+        self.smooth = smooth
+
+    def forward(self, inputs, targets):
+        inputs = torch.softmax(inputs, dim=1)
+        targets = F.one_hot(targets, num_classes=inputs.shape[1]).permute(0, 3, 1, 2).float()
+        
+        intersection = (inputs * targets).sum(dim=(2, 3))
+        union = inputs.sum(dim=(2, 3)) + targets.sum(dim=(2, 3))
+        
+        dice = (2. * intersection + self.smooth) / (union + self.smooth)
+        dice_loss = 1 - dice.mean()
+        return dice_loss
+
+class TverskyLoss(nn.Module):
+    def __init__(self, alpha=0.5, beta=0.5, smooth=1.):
+        super(TverskyLoss, self).__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.smooth = smooth
+
+    def forward(self, inputs, targets):
+        inputs = torch.softmax(inputs, dim=1)
+        targets = F.one_hot(targets, num_classes=inputs.shape[1]).permute(0, 3, 1, 2).float()
+        
+        TP = (inputs * targets).sum(dim=(2, 3))
+        FP = ((1 - targets) * inputs).sum(dim=(2, 3))
+        FN = (targets * (1 - inputs)).sum(dim=(2, 3))
+        
+        Tversky = (TP + self.smooth) / (TP + self.alpha * FP + self.beta * FN + self.smooth)
+        Tversky_loss = 1 - Tversky.mean()
+        return Tversky_loss
+
+class FocalCosineLoss(nn.Module):
+    def __init__(self, gamma=2.0, alpha=1.0, reduction='mean'):
+        super(FocalCosineLoss, self).__init__()
+        self.gamma = gamma
+        self.alpha = alpha
+        self.reduction = reduction
+
+    def forward(self, input, target):
+        # Assuming input is already logits and target is one-hot encoded
+        cosine_loss = F.cosine_embedding_loss(input, F.one_hot(target, num_classes=input.size(-1)),
+                                              torch.ones(input.size(0)).to(input.device), reduction=self.reduction)
+        pt = 1 - cosine_loss
+        focal_loss = self.alpha * (1 - pt)**self.gamma * cosine_loss
+
+        return focal_loss
 
 
 #########################
@@ -497,7 +566,6 @@ def _traceback(DTW, slope_constraint):
 
     return p[:idx][::-1], q[:idx][::-1]
 
-
 def dtw(prototype, sample, return_flag=RETURN_VALUE, slope_constraint="asymmetric", window=None):
     p = prototype.shape[0]
     s = sample.shape[0]
@@ -523,7 +591,6 @@ def dtw(prototype, sample, return_flag=RETURN_VALUE, slope_constraint="asymmetri
         return _traceback(DTW, slope_constraint)
     else:
         return DTW[-1, -1]
-
 
 @jit(nopython=True)
 def _cummulative_matrix(cost, slope_constraint, window):
@@ -555,7 +622,6 @@ def _cummulative_matrix(cost, slope_constraint, window):
         raise ValueError("Unknown slope constraint: " + slope_constraint)
 
     return DTW
-
 
 @jit(nopython=True)
 def calculate_cost_matrix(prototype_pad, sample_pad, p, s, p_feature_len, s_feature_len, window):
@@ -652,7 +718,6 @@ def beat_permutation(x):
 
 
 #magnitude warp, basically move the ECGs magnitude using a cubic spline with 4 knots
-
 def single_instance_warp(i, x_slice, warp_steps, random_warps, T, C):
     """
     Apply warping to a single instance (slice) of the array.
@@ -806,7 +871,6 @@ def jitter_small(x, sigma=0.03):
     a,_ = x.shape  #assuming dim [N,2500,12]
     return x + np.repeat(np.random.normal(loc=0., scale=sigma, size=[a]).astype(np.float16)[:, np.newaxis], 12, axis=-1)
 
-
 def spawner_worker(i, pat, random_sample, random_point, window, orig_steps, sigma):
 
     result = np.zeros((2500,12))
@@ -941,7 +1005,6 @@ def random_guided_warp_shape(batch, full_dataset, batch_labels, full_dataset_lab
         dtw_type="shape"
     )
 
-
 def window_slice(x, reduce_ratio=0.9):
     target_len = np.ceil(reduce_ratio * x.shape[1]).astype(int)
     if target_len >= x.shape[1]:
@@ -960,9 +1023,6 @@ def window_slice(x, reduce_ratio=0.9):
     return ret
     
 #porposed approach discriminative_guided_warp_worker
-
-
-
 def downsample(sequence, factor):
     # Downsample each channel independently
     return sequence[::factor, :]
@@ -982,8 +1042,6 @@ def upsample(warped_sequence, num_channels=12, original_length=2934):
         upsampled[:, i] = np.round(interpolated).astype(int)
 
     return upsampled
-
-
 
 def discriminative_guided_warp_worker(i, pat, positive_prototypes, negative_prototypes, slope_constraint, dtw_type, window, orig_steps, x_shape):
     C = x_shape[2]  # Number of channels
@@ -1039,7 +1097,6 @@ def discriminative_guided_warp_worker(i, pat, positive_prototypes, negative_prot
         warped_instance[:, dim] = np.interp(orig_steps, np.linspace(0, x_shape[1]-1., num=warped.shape[0]), warped[:, dim]).T
 
     return warped_instance, warp_amount
-
 
 def downsample(sequence, factor):
     return sequence[::factor, :]
@@ -1175,7 +1232,6 @@ def discriminative_guided_warp(x, full_dataset, labels, full_dataset_labels, bat
 def discriminative_guided_warp_shape(x, labels, full_dataset, full_dataset_labels, batch_size=6, slope_constraint="symmetric", use_window=True, use_variable_slice=True, verbose=0, num_threads=18):
     return discriminative_guided_warp(x, labels, full_dataset, full_dataset_labels, batch_size, slope_constraint, use_window, dtw_type="shape", use_variable_slice=use_variable_slice, verbose=verbose, num_threads=num_threads)
 
-
 ##############
 # Dataloader #
 ##############
@@ -1215,14 +1271,55 @@ def select_indices(X, Y, target_count=25):
 
     return X_selected, Y_selected
 
+def val_collate_fn(batch):
+    # Unzip the batch into data and labels
+    data = [x for x, y in batch]
+    labels = [y for x, y in batch]
+
+    # Convert to numpy arrays
+    data = np.squeeze(np.stack(data, axis=0))
+    labels = np.stack(labels, axis=0)
+
+    # Find rows where any element is not between 0 and 1
+    invalid_rows = np.any((labels < 0) | (labels > 1), axis=1)
+
+    # Get indices of invalid rows
+    invalid_indices = np.where(invalid_rows)[0]
+
+    # Filter out invalid rows from both X and Y matrices
+    data = np.delete(data, invalid_indices, axis=0)  
+    labels = np.delete(labels, invalid_indices, axis=0) 
+    return torch.tensor(data, dtype=torch.float32), torch.tensor(labels, dtype=torch.long)
 
 def custom_collate_fn(batch, transform, transform_prob):
+    #print('collate')
+    #print(len(batch))
+    #print(len(batch[0]))
+
+    #print(batch[1][0].shape)
+    #print(batch[1][1].shape)
 
     # Unzip the batch into data and labels
-    data, labels = zip(*batch)
+    data = [x for x, y in batch]
+    labels = [y for x, y in batch]
+
     # Convert to numpy arrays
-    data = np.array(data)
-    labels = np.array(labels)
+    data = np.squeeze(np.stack(data, axis=0))
+    labels = np.stack(labels, axis=0)
+
+    # Find rows where any element is not between 0 and 1
+    invalid_rows = np.any((labels < 0) | (labels > 1), axis=1)
+
+    # Get indices of invalid rows
+    invalid_indices = np.where(invalid_rows)[0]
+
+    # Filter out invalid rows from both X and Y matrices
+    data = np.delete(data, invalid_indices, axis=0)  
+    labels = np.delete(labels, invalid_indices, axis=0) 
+    
+
+    #print(data.shape)
+    #print(labels.shape)
 
     # Determine the number of samples to transform
     batch_size = len(data)
@@ -1241,17 +1338,25 @@ def custom_collate_fn(batch, transform, transform_prob):
     
     transform = transform_[transform]
 
+    #print(type(data))
+    #print(data.shape)
 
     # Apply the transformation to the selected samples 
     if transform is not None:
+        #data = np.swapaxes(data, -2,-1)
         data[indices_to_transform] = transform(data[indices_to_transform])
+        data = np.swapaxes(data, -2,-1)
+
     return torch.tensor(np.swapaxes(data, -2,-1), dtype=torch.float32), torch.tensor(labels, dtype=torch.long)
 
 
 def custom_collate_fn_label(batch, ds, ds_labels, transform, transform_prob):
+
+    print(batch.shape)
     # Unzip the batch into data and labels
     data, labels = zip(*batch)
 
+    print(data.shape)
     # Convert to numpy arrays
     data = np.array(data)
     labels = np.array(labels)
@@ -1279,7 +1384,6 @@ class MyCustomDataset(Dataset):
     def __getitem__(self, idx):
         x = self.data[idx]
         y = self.labels[idx]
-        #x = np.swapaxes(x, 0, 1)
         return x, y
     
 
@@ -1302,6 +1406,55 @@ class ECGDataset(Dataset):
     def __len__(self):
         return len(self.data)
     
+
+def get_shape_dtype_from_npy_file(npy_file_path):
+    with open(npy_file_path, 'rb') as f:
+        # Read the magic string to get version number
+        version = read_magic(f)
+
+        # Read the array header which contains the shape and dtype
+        shape, fortran_order, dtype = _read_array_header(f, version)
+        
+    return shape, dtype
+
+class CustomDataset(Dataset):
+    def __init__(self, features_memmap_path, labels_memmap_path, features_shape, labels_shape, pos_to_drop, dtype=np.float16):
+        """
+        Initialize the dataset.
+        :param features_memmap_path: Path to the .npy file for features.
+        :param labels_memmap_path: Path to the .npy file for labels.
+        :param features_shape: Shape of the features dataset array.
+        :param labels_shape: Shape of the labels dataset array.
+        :param pos_to_drop: Positions (columns) to drop from the Y labels.
+        :param dtype: Data type of the datasets.
+        """
+        self.features_memmap_path = features_memmap_path
+        self.labels_memmap_path = labels_memmap_path
+        self.features_shape = features_shape
+        self.labels_shape = labels_shape
+        self.pos_to_drop = pos_to_drop
+        self.dtype = dtype
+
+    def __len__(self):
+        return self.features_shape[0]  # Assuming first dimension is number of samples
+
+    def __getitem__(self, idx):
+        # Memory-map the file in read-only mode for features and labels
+        #features = np.memmap(self.features_memmap_path, dtype=self.dtype, mode='r', shape=self.features_shape)[idx]
+        features = np.load(self.features_memmap_path, mmap_mode='r')[idx]
+        labels = np.load(self.labels_memmap_path, mmap_mode='r')[idx]
+
+
+        # Drop specified columns from labels
+        labels = np.delete(labels, self.pos_to_drop, axis=0)  # axis=0 for dropping columns
+
+        # Convert to torch tensors
+        features_tensor = torch.from_numpy(np.expand_dims(features, axis=0)).float()
+        labels_tensor = torch.from_numpy(labels).float()
+
+
+        return features_tensor, labels_tensor
+
 
 #########
 # other #
@@ -1398,4 +1551,17 @@ class EMAWeightUpdater:
     def restore_original(self, original_state_dict):
         self.model.load_state_dict(original_state_dict)
 
+def logits_to_hard_labels(logits, threshold=0.5):
+    """
+    Convert logits from a multi-label model to hard labels.
 
+    :param logits: A tensor of logits from the model.
+    :param threshold: Threshold to convert probabilities to binary values. Defaults to 0.5.
+    :return: A tensor of hard labels.
+    """
+    # Apply sigmoid to convert logits to probabilities
+    probabilities = torch.sigmoid(logits)
+
+    # Apply threshold to convert probabilities to binary values
+    hard_labels = (probabilities > threshold).int()  # Using .int() to convert boolean to integers (0, 1)
+    return hard_labels
