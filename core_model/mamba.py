@@ -521,7 +521,7 @@ class FinalMambaBlock(nn.Module):
         h = torch.zeros(x.size(0), self.config.d_inner, self.config.d_state, device=deltaA.device) # (B, ED, N)
         hs = []
 
-        for t in range(0, L):
+        for t in range(L):
             h = deltaA[:, t] * h + BX[:, t]
             hs.append(h)
             
