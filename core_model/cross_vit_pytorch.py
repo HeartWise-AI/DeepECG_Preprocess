@@ -75,9 +75,7 @@ class LayerNormalization(nn.Module):
         return y
 
     def extra_repr(self):
-        return 'normal_shape={}, gamma={}, beta={}, epsilon={}'.format(
-            self.normal_shape, self.gamma is not None, self.beta is not None, self.epsilon,
-        )
+        return f'normal_shape={self.normal_shape}, gamma={self.gamma is not None}, beta={self.beta is not None}, epsilon={self.epsilon}'
 
 
 class FeedForward(nn.Module):
