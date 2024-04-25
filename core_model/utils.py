@@ -619,7 +619,7 @@ def _cummulative_matrix(cost, slope_constraint, window):
                 DTW[i, j] = cost[i - 1, j - 1] + min(DTW[i - 1, j - 1], DTW[i, j - 1], DTW[i - 1, j])
 
     else:
-        raise ValueError("Unknown slope constraint: " + slope_constraint)
+        raise ValueError(f"Unknown slope constraint: {slope_constraint}")
 
     return DTW
 
