@@ -109,9 +109,9 @@ class ResNetBlock(nn.Module):
     def forward(self, x):
         identity = self.shortcut(x)
 
-        if self.training and self.stochastic_depth > 0.0:
-            if torch.rand(1).item() < self.stochastic_depth:
-                return identity  # Skip the block
+        if self.training and self.stochastic_depth > 0.0 and torch.rand(1).item() < self.stochastic_depth:
+            return identity  # Skip the block
+
 
         residual = self.shortcut(x)
         #if self.shortcut == nn.Identity():
