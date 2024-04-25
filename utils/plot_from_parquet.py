@@ -1,9 +1,11 @@
+import io
 import os
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 import pandas as pd
+from PIL import Image
 
 
 def insert_newline(input_str, max_length):
@@ -31,9 +33,10 @@ def plot_from_parquet(
     time=None,
     diagnosis_column="diagnosis",
     patient_id_column="new_PatientID",
+    subtitle_column=None,
     index=None,
     save=False,
-    anonym=True,
+    anonymize=True,
     out_dir="/volume",
 ):
     """
@@ -48,7 +51,7 @@ def plot_from_parquet(
     - diagnosis_column: Name of the column containing the diagnosis (str).
     - index: Index in parquet to plot (int).
     - save: Saves PNG if True (bool).
-    - anonym: Saves PNG anonymously if True (bool).
+    - anonymize: Saves PNG anonymizeously if True (bool).
     - out_dir: Output directory for saving PNG (str).
     Returns:
     - A PNG file or displays the plot.
@@ -80,11 +83,23 @@ def plot_from_parquet(
         line = parquet.iloc[index]
         npy_path = line["npy_path"]
 
-        title = line[diagnosis_column]
-
-        patient_id = line[patient_id_column]
-        date = line["RestingECG_TestDemographics_AcquisitionDate"]
-        time = line["RestingECG_TestDemographics_AcquisitionTime"]
+        if not anonymize:
+            try:
+                patient_id = line[patient_id_column]
+                title = f"Patient ID: {patient_id}"
+            except:
+                title = ""
+            try:
+                date = line["RestingECG_TestDemographics_AcquisitionDate"]
+                title += f" - Date: {date}"
+            except:
+                pass
+            try:
+                time = line["RestingECG_TestDemographics_AcquisitionTime"]
+                title += f" - Time: {time}"
+            except:
+                pass
+        title += f" - {line[diagnosis_column]}"
 
     else:
         assert patient_id in parquet.patient_id_column.tolist(), "the patient ID doesn't exits"
@@ -102,25 +117,35 @@ def plot_from_parquet(
         ]
 
         if len(line) > 1:
-            print("WARNING: more that one match: taking the first one")
+            print("WARNING: more than one match: taking the first one")
             line = line.iloc[0]
             npy_path = line["npy_path"]
             print(npy_path)
 
-            if plot_original_diagnosis == True:
-                title = line["original_diagnosis"]
-            else:
-                title = line["diagnosis"].tolist()
+            title = (
+                line["original_diagnosis"]
+                if plot_original_diagnosis
+                else line["diagnosis"].tolist()
+            )
+            if not anonymize:
+                title += f" - Patient ID: {patient_id} - Date: {date} - Time: {time}"
 
         else:
             npy_path = line["npy_path"].tolist()[0]
-            if plot_original_diagnosis == True:
-                title = line["original_diagnosis"].tolist()[0]
-            else:
-                title = line["diagnosis"].tolist()[0]
+            title = (
+                line["original_diagnosis"].tolist()[0]
+                if plot_original_diagnosis
+                else line["diagnosis"].tolist()[0]
+            )
+            if not anonymize:
+                title += f" - Patient ID: {patient_id} - Date: {date} - Time: {time}"
+
+        # Support for subtitle_text as title
+    if subtitle_column:
+        subtitle_text = line[subtitle_column]
+        title += f" - {subtitle_text}"
 
     print(f"Plotting ID {patient_id} at {date} {time}")
-
     lead_order = [
         "I",
         "II",
@@ -233,10 +258,30 @@ def plot_from_parquet(
     plt.tight_layout()
 
     if save == True:
-        if anonym == False:
+        if anonymize == False:
             plt.savefig(os.path.join(out_dir, f"{patient_id}_{date}_{time}.png"))
         else:
-            plt.savefig(os.path.join(out_dir, "ECG.png"))
+            current_time = time.strftime("%Y%m%d-%H%M%S")
+            plt.savefig(os.path.join(out_dir, f"ECG_{current_time}.png"))
 
     else:
         plt.show()
+    # Set the background color to be transparent
+    fig.patch.set_alpha(0)
+
+    # Create a BytesIO object to store the plot image
+    img_buffer = io.BytesIO()
+
+    # Save the plot to the BytesIO object with transparent background
+    plt.savefig(img_buffer, format="png", transparent=True)
+
+    # Seek the BytesIO object to the beginning
+    img_buffer.seek(0)
+
+    # Create a PIL Image from the BytesIO object
+    img = Image.open(img_buffer)
+
+    # Close the plot to free up memory
+    plt.close()
+
+    return img

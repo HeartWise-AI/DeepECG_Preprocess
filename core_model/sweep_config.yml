@@ -1,0 +1,88 @@
+# run name
+"name": "vit_1d"
+#optimizing method
+"method": "bayes" #choice between bayes, random and grid
+#optimization goal
+"metric": {"name": "best_val_MultilabelAUPRC_macro", "goal": "maximize"}
+
+training_context: multiclass #this can be either multiclass, mulitlabel or binary
+use_AMP: False
+training_context: multilabel
+#the first step allow multiple data transformation
+
+#put the data
+#model to run, this will fetch the appropriate model config
+model_type: 'resnet' #resnet, vit_1d
+main_path: '/media/datasets/anolin'
+
+# untransformed, min_max_leads, quantiletransformernormal_leads_div
+
+use_different_scaling: False
+
+data_path: '/media/datasets/anolin/'
+
+data_types  : ['minmax_leads','QT_leads', 'standard_scaled', 'min_max_scaled', 'quantiletransformernormal'] #'unscaled', 
+train_X_path: ['X_train_v1.1.minmaxscaler_leads.npy','X_train_v1.1.quantiletransformernormal_leads_div.npy', 'X_train_v1.1.standardscaled.npy', 'X_train_v1.1.maxabsscaler.npy','X_train_v1.1.quantiletransformernormal.npy'] #'X_train_v1.1.npy',
+val_X_path:   ['X_val_v1.1.minmaxscaler_leads.npy','X_val_v1.1.quantiletransformernormal_leads_div.npy', 'X_val_v1.1.standardscaled.npy', 'X_val_v1.1.maxabsscaler.npy','X_val_v1.1.quantiletransformernormal.npy'] #'X_val_v1.1.npy',
+test_X_path:  ['X_test_v1.1.npy','X_test_v1.1.minmaxscaler_leads.npy','X_test_v1.1.quantiletransformernormal_leads.npy', 'X_test_v1.1.standardscaled.npy', 'X_test_v1.1.maxabsscaler.npy','X_test_v1.1.quantiletransformernormal.npy']
+
+#the Y remains unchanged
+train_Y_path: 'Y_train_v1.1.npy'
+val_Y_path: 'Y_val_v1.1.npy'
+test_Y_path: 'Y_test_v1.1.npy'
+
+#apply_scaling: ['no_scaling'] #
+y_label_names: ['Sinusal','Regular','Monomorph','QS complex in V1-V2-V3','R complex in V5-V6','T wave inversion (inferior - II, III, aVF)','Left bundle branch block','RaVL > 11 mm','SV1 + RV5 or RV6 > 35 mm','T wave inversion (lateral -I, aVL, V5-V6)','T wave inversion (anterior - V3-V4)','Left axis deviation','Left ventricular hypertrophy','Bradycardia','Q wave (inferior - II, III, aVF)','Afib','Irregularly irregular','Atrial tachycardia (>= 100 BPM)','Nonspecific intraventricular conduction delay','Premature ventricular complex','Polymorph','T wave inversion (septal- V1-V2)','Right bundle branch block','Ventricular paced','ST elevation (anterior - V3-V4)','ST elevation (septal - V1-V2)','1st degree AV block','Premature atrial complex','Atrial flutter',"rSR' in V1-V2",'qRS in V5-V6-I, aVL','Left anterior fascicular block','Right axis deviation','2nd degree AV block - mobitz 1','ST depression (inferior - II, III, aVF)','Acute pericarditis','ST elevation (inferior - II, III, aVF)','Low voltage','Regularly irregular','Bifid','Junctional rhythm','Left atrial enlargement','ST elevation (lateral - I, aVL, V5-V6)','Atrial paced','Right ventricular hypertrophy','Delta wave','Wolff-Parkinson-White (Pre-excitation syndrome)','Prolonged QT','ST depression (anterior - V3-V4)','QRS complex negative in III','RaVL + SV3 > 28 mm (H) or 20 mm (F)','Q wave (lateral- I, aVL, V5-V6)','Hyperacute T wave (lateral, V5-V6)','Hyperacute T wave (septal, V1-V2)','Supraventricular tachycardia','ST downslopping','ST depression (lateral - I, avL, V5-V6)','2nd degree AV block - mobitz 2','U wave','ST depression et T inversion in V5 or V6','Large >0.08 s','R/S ratio in V1-V2 >1','RV1 + SV6\xa0> 11 mm','Left posterior fascicular block','Right atrial enlargement','ST depression (septal- V1-V2)','Q wave (septal- V1-V2)','Q wave (anterior - V3-V4)','Hyperacute T wave (anterior, V3-V4)','ST upslopping','Right superior axis','Auricular bigeminy','Ventricular tachycardia','ST elevation (posterior - V7-V8-V9)','Ectopic atrial rhythm (< 100 BPM)','Lead misplacement','Biphasic','Ventricular bigeminy','J wave','Tall >2.5 mm','Third Degree AV Block','Sinus Pause','Acute MI','Early repolarization','Q wave (posterior - V7-V9)','Bi-atrial enlargement','LV pacing','Dextrocardia','Brugada','Ventricular Rhythm','ST depression (posterior - V7-V8-V9)','no_qrs']
+clean_labels: True
+labels_to_remove: ['ST depression (posterior - V7-V8-V9)','Tall >2.5 mm', 'J wave', 'Auricular bigeminy', 'Ventricular bigeminy', 'Sinus Pause', 'Dextrocardia', 'Hyperacute T wave (lateral, V5-V6)', 'Hyperacute T wave (septal, V1-V2)', 'Hyperacute T wave (anterior, V3-V4)', 'Bifid', 'RaVL + SV3 > 28 mm (H) or 20 mm (F)', 'Large >0.08 s', 'Biphasic', 'ST depression et T inversion in V5 or V6']
+
+#augment
+augment: [0.7,0.00]
+function: ['window_warp_multithreaded','window_slice_multithreaded','time_warp_multithreaded','magnitude_warp_uniform_multithreaded','beat_permutation','scaling','jitter']
+
+#check the dataset for common  errrors
+validate_dataset: False
+expected_X_shape: [2500,12]
+
+use_pretrained: False
+pretrained_weights: '' 
+clean_dir: True 
+
+seed: [42]
+
+#GPU to use, on 229 there are 4 - ID [0,1,2,3]
+gpu_to_use: [0,1]
+save_dir: '/media/data1/anolin/efficientnet_both_output' 
+
+#general optimisation parameters
+lr: [0.01,0.000000001]
+scheduler: ['by_plateau', 'cosine_annealing',  'none'] #'triangular2''lambda',
+optimiser: ['AdamW','Radam']
+activation: ['relu','leaky_relu','gelu','selu','mish','swish']
+num_max_epochs: [25]
+ema_value: [0.9999999, 0.80]
+apply_label_smoothing: [True]
+label_smoothing_factor: [0.0000001,0.0] #
+rand_augment: [False] #not implemented yet, keep to false
+stochastic_depth: [0.5,0.0]
+weight_decay: [0.001, 0.0000001] #[0.1,0.0000001]
+dropout: [0.0,0.5]
+batch_size: [218] 
+out_neurons: [77]
+out_activation: ['sigmoid']
+use_adaptive_clipping: [True, False]
+use_warmup: [True, False]
+use_ema: [False]
+loss: ['TwoWayLoss','Hill','asymmetric_loss','SPLC','MultiLabelSoftMarginLoss','binary_ce','binary_focalloss_2','binary_focalloss_3',]
+
+
+#TODO add
+#focal_loss_alpha: [0.5,0.8]
+#focal_loss_gamma: [1,5]
+
+#printing during training
+print_every_n_steps: 100
+print_per_class: False
+log_wandb_performance: True
+
+

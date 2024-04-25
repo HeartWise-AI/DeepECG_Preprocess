@@ -4,3 +4,5 @@ ekg_JPEG/
 examples_Tahsin/
 exercise/
 lqts_ecg/
+*.csv
+
