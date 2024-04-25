@@ -690,7 +690,7 @@ def process_slice(a_):
     try:
         wd, m = hp.process(a_, 250) #use the optimised heartpy beatfinder
         return wd['peaklist']
-    except:
+    except Exception:
         return []
 
 def beat_permutation(x):
