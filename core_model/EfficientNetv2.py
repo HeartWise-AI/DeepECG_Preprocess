@@ -135,8 +135,17 @@ class MBConv1d(nn.Module):
         return x
 
 class EfficientNet1DV2(nn.Module):
-    def __init__(self, variant='s', input_channels=12, num_classes=77, activation='swish',se_ratio=4,base_depths = [1, 2, 2, 3, 3, 4, 1],base_channels = [32, 16, 24, 40, 80, 112, 192],expansion_factors = [1, 6, 6, 6, 6, 6, 6],
-                 stochastic_depth_prob=0.0, dropout_rate=0.0, use_se=True,kernel_sizes=[3, 3, 3, 5, 3, 5, 5, 3], strides=[1, 2, 2, 2, 1, 2, 2, 1], ):
+    def __init__(self, variant='s', input_channels=12, num_classes=77, activation='swish', se_ratio=4, base_depths=None, base_channels=None, expansion_factors=None, stochastic_depth_prob=0.0, dropout_rate=0.0, use_se=True, kernel_sizes=None, strides=None):
+        if base_depths is None:
+            base_depths = [1, 2, 2, 3, 3, 4, 1]
+        if base_channels is None:
+            base_channels = [32, 16, 24, 40, 80, 112, 192]
+        if expansion_factors is None:
+            expansion_factors = [1, 6, 6, 6, 6, 6, 6]
+        if kernel_sizes is None:
+            kernel_sizes = [3, 3, 3, 5, 3, 5, 5, 3]
+        if strides is None:
+            strides = [1, 2, 2, 2, 1, 2, 2, 1]
         super(EfficientNet1DV2, self).__init__()
         config = get_backbone_config(variant)
         width_coefficient, depth_coefficient = config['width_coefficient'], config['depth_coefficient']
