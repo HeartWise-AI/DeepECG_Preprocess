@@ -1,16 +1,19 @@
 # Filename: plot_ecg_from_xml.py
 
+import io
 import os
+import time
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
+from PIL import Image
 
 from CLI_xml2df import tinyxml2df
 
 
 class XMLtoNumpyConverter:
-    def __init__(self, xml_path, out_path="/tmp"):
+    def __init__(self, xml_path, out_path="tmp/"):
         self.xml_path = xml_path
         self.out_path = out_path
 
@@ -20,7 +23,7 @@ class XMLtoNumpyConverter:
         return npy_path
 
 
-def plot_ecg_from_npy(npy_path, title="ECG Plot", out_dir="/tmp", save=False):
+def plot_ecg_from_npy(npy_path, title="ECG Plot", out_dir="tmp/", save=False):
     ekg_array = np.load(npy_path)
     lead_order = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
     lead_dict = dict(zip(lead_order, np.swapaxes(np.squeeze(ekg_array), 0, 1)))
@@ -41,6 +44,24 @@ def plot_ecg_from_npy(npy_path, title="ECG Plot", out_dir="/tmp", save=False):
         plt.show()
 
 
+def insert_newline(input_str, max_length):
+    """
+    Inserts a newline character at the specified maximum length in the input string.
+    Parameters:
+    - input_str (str): The input string.
+    - max_length (int): The maximum number of characters before inserting a newline.
+    Returns:
+    - str: The modified string with newline characters.
+    """
+    if len(input_str) > max_length:
+        newline_index = max_length
+        while newline_index < len(input_str) and input_str[newline_index] != " ":
+            newline_index += 1
+        if newline_index < len(input_str):
+            input_str = input_str[:newline_index] + "\n" + input_str[newline_index:]
+    return input_str
+
+
 def plot_xml_files(xml_files, save=False):
     if isinstance(xml_files, str):
         xml_files = [xml_files]  # Convert to list if only one file is provided
@@ -49,10 +70,121 @@ def plot_xml_files(xml_files, save=False):
         print(f"Processing: {xml_path}")
         converter = XMLtoNumpyConverter(xml_path)
         result = converter.load_and_convert()
-        npy_path = result.npy_path[
-            0
-        ]  # Assuming this is the correct way to access the waveform array
+
         plot_ecg_from_npy(npy_path, title=os.path.basename(xml_path), save=save)
+
+
+def plot_ecg_from_xml(xml_path, title="ECG Plot", out_dir="tmp/", save=False, anonymize=True):
+    plt.style.use("default")
+
+    converter = tinyxml2df(xml_path, out_dir, verbose=True, save=False)
+    npy_path = converter.read2flatten().npy_path[0]
+
+    if not anonymize:
+        title = os.path.basename(xml_path)
+
+    lead_order = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
+    lead_dict = dict(zip(lead_order, np.swapaxes(np.squeeze(np.load(npy_path)), 0, 1)))
+    activation = [0] * 5 + [10] * 50 + [0] * 5
+
+    pannel_1_y = (
+        [i + 50 for i in activation]
+        + [((i * 4.88) / 100) + 50 for i in lead_dict["I"][60:625]]
+        + [((i * 4.88) / 100) + 50 for i in lead_dict["aVR"][625:1250]]
+        + [((i * 4.88) / 100) + 50 for i in lead_dict["V1"][1250:1875]]
+        + [((i * 4.88) / 100) + 50 for i in lead_dict["V4"][1875:2500]]
+    )
+    pannel_2_y = (
+        [i + 15 for i in activation]
+        + [((i * 4.88) / 100) + 15 for i in lead_dict["II"][60:625]]
+        + [((i * 4.88) / 100) + 15 for i in lead_dict["aVL"][625:1250]]
+        + [((i * 4.88) / 100) + 15 for i in lead_dict["V2"][1250:1875]]
+        + [((i * 4.88) / 100) + 15 for i in lead_dict["V5"][1875:2500]]
+    )
+    pannel_3_y = (
+        [i - 15 for i in activation]
+        + [((i * 4.88) / 100) - 15 for i in lead_dict["III"][60:625]]
+        + [((i * 4.88) / 100) - 15 for i in lead_dict["aVF"][625:1250]]
+        + [((i * 4.88) / 100) - 15 for i in lead_dict["V3"][1250:1875]]
+        + [((i * 4.88) / 100) - 15 for i in lead_dict["V6"][1875:2500]]
+    )
+    pannel_4_y = [i - 50 for i in activation] + [
+        ((i * 4.88) / 100) - 50 for i in lead_dict["II"][60::]
+    ]
+
+    fig, ax = plt.subplots(figsize=(40, 20))
+    ax.minorticks_on()
+
+    ax.vlines(60, -10, -20, label="III", linewidth=4)
+    ax.text(60, -10, "III", fontsize=44)
+
+    ax.vlines(625, -10, -20, label="aVF", linewidth=4)
+    ax.text(625, -10, "aVF", fontsize=44)
+
+    ax.vlines(1250, -10, -20, label="V3", linewidth=4)
+    ax.text(1250, -10, "V3", fontsize=44)
+
+    ax.vlines(1875, -10, -20, label="V6", linewidth=4)
+    ax.text(1875, -10, "V6", fontsize=44)
+    ax.vlines(60, 10, 20, label="II", linewidth=4)
+    ax.text(60, 20, "II", fontsize=44)
+    ax.vlines(625, 10, 20, label="aVL", linewidth=4)
+    ax.text(625, 20, "aVL", fontsize=44)
+    ax.vlines(1250, 10, 20, label="V2", linewidth=4)
+    ax.text(1250, 20, "V2", fontsize=44)
+    ax.vlines(1875, 10, 20, label="V5", linewidth=4)
+    ax.text(1875, 20, "V5", fontsize=44)
+    ax.vlines(60, 45, 55, label="I", linewidth=4)
+    ax.text(60, 55, "I", fontsize=44)
+    ax.vlines(625, 45, 55, label="aVR", linewidth=4)
+    ax.text(625, 55, "aVR", fontsize=44)
+    ax.vlines(1250, 45, 55, label="V1", linewidth=4)
+    ax.text(1250, 55, "V1", fontsize=44)
+    ax.vlines(1875, 45, 55, label="V4", linewidth=4)
+    ax.text(1875, 55, "V4", fontsize=44)
+    ax.vlines(60, -55, -45, label="II", linewidth=4)
+    ax.text(60, -45, "II", fontsize=44)
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(50))
+    ax.xaxis.set_minor_locator(ticker.MultipleLocator(10))
+    ax.yaxis.set_major_locator(ticker.MultipleLocator(5))
+    ax.yaxis.set_minor_locator(ticker.MultipleLocator(1))
+    ax.grid(ls="-", color="red", linewidth=1.2)
+    ax.grid(which="minor", ls=":", color="red", linewidth=1)
+    ax.axis([0 - 100, 2500 + 100, min(pannel_4_y) - 10, max(pannel_1_y) + 10])
+    x = [pos for pos in range(0, len(pannel_1_y))]
+    ax.plot(x, pannel_1_y, linewidth=3, color="#000000")
+    ax.plot(x, pannel_2_y, linewidth=3, color="#000000")
+    ax.plot(x, pannel_3_y, linewidth=3, color="#000000")
+    ax.plot(x, pannel_4_y, linewidth=3, color="#000000")
+
+    ax.set_title(
+        insert_newline(title, 150),
+        fontsize=30,
+        bbox=dict(facecolor="white", edgecolor="white", boxstyle="round,pad=0.3"),
+    )
+
+    plt.tight_layout()
+
+    if save:
+        if not anonymize:
+            plt.savefig(os.path.join(out_dir, f"{title}.png"))
+        else:
+            current_time = time.strftime("%Y%m%d-%H%M%S")
+            plt.savefig(os.path.join(out_dir, f"ECG_{current_time}.png"))
+    else:
+        plt.show()
+
+    fig.patch.set_alpha(0)
+
+    img_buffer = io.BytesIO()
+    plt.savefig(img_buffer, format="png", transparent=True)
+    img_buffer.seek(0)
+
+    img = Image.open(img_buffer)
+
+    plt.close()
+
+    return img
 
 
 if __name__ == "__main__":
@@ -63,7 +195,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--save", action="store_true", help="Save the plots instead of displaying"
     )
+    parser.add_argument("--anonymize", action="store_true", help="Save the plots anonymously")
 
     args = parser.parse_args()
 
-    plot_xml_files(args.xml_files, save=args.save)
+    for xml_path in args.xml_files:
+        plot_ecg_from_xml(xml_path, save=args.save, anonymize=args.anonymize)

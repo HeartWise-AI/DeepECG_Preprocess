@@ -266,6 +266,7 @@ class tinyxml2df:
             print("path is a dataframe")
             file_paths = self.path["path"].tolist()
         elif isinstance(self.path, str):
+            print(self.path)
             if os.path.isdir(self.path):
                 print("path is a directory")
                 file_paths = [
@@ -273,11 +274,16 @@ class tinyxml2df:
                     for f in os.listdir(self.path)
                     if f.endswith(".xml")
                 ]
-            elif os.path.isfile(self.path) and self.path.endswith(".xml"):
-                print("path is an XML file")
-                file_paths = [self.path]
+            elif os.path.isfile(self.path):
+                if self.path.endswith(".xml"):
+                    print("path is an XML file")
+                    file_paths = [self.path]
+                else:
+                    raise ValueError("File must be an XML file")
+            elif not os.path.exists(self.path):
+                raise ValueError("Path does not exist")
             else:
-                raise ValueError("Path must be a directory or an XML file.")
+                raise ValueError("Path must be a file or directory")
         else:
             raise ValueError("Invalid input type for in_path. Expected str or DataFrame.")
 
@@ -293,7 +299,7 @@ class tinyxml2df:
                 npy_extracted = self.xml_to_np_array_file(
                     ECG_data_nested, os.path.join(self.out_path, "ecg_npy/")
                 )
-
+                print(npy_extracted)
                 try:
                     dx_txt = []
                     for line in ECG_data_nested["RestingECG"]["Diagnosis"]["DiagnosisStatement"]:
