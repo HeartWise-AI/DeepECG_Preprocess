@@ -1,8 +1,6 @@
 # Filename: plot_ecg_from_xml.py
 
-import io
 import os
-import time
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -74,14 +72,23 @@ def plot_xml_files(xml_files, save=False):
         plot_ecg_from_npy(npy_path, title=os.path.basename(xml_path), save=save)
 
 
-def plot_ecg_from_xml(xml_path, title="ECG Plot", out_dir="tmp/", save=False, anonymize=True):
+def plot_ecg_from_xml(
+    xml_path, title="ECG Plot", out_dir="tmp/", save=False, anonymize=True, width=2500
+):
+    import io
+    import os
+    import time
+
+    import matplotlib
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from matplotlib import ticker
+    from PIL import Image
+
     plt.style.use("default")
 
     converter = tinyxml2df(xml_path, out_dir, verbose=True, save=False)
     npy_path = converter.read2flatten().npy_path[0]
-
-    if not anonymize:
-        title = os.path.basename(xml_path)
 
     lead_order = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
     lead_dict = dict(zip(lead_order, np.swapaxes(np.squeeze(np.load(npy_path)), 0, 1)))
@@ -157,34 +164,51 @@ def plot_ecg_from_xml(xml_path, title="ECG Plot", out_dir="tmp/", save=False, an
     ax.plot(x, pannel_3_y, linewidth=3, color="#000000")
     ax.plot(x, pannel_4_y, linewidth=3, color="#000000")
 
-    ax.set_title(
-        insert_newline(title, 150),
-        fontsize=30,
-        bbox=dict(facecolor="white", edgecolor="white", boxstyle="round,pad=0.3"),
-    )
+    if title:
+        ax.set_title(
+            insert_newline(title, 150),
+            fontsize=30,
+            bbox=dict(facecolor="white", edgecolor="white", boxstyle="round,pad=0.3"),
+        )
+
+    # Hide x and y axis labels
+    ax.set_xlabel("")
+    ax.set_ylabel("")
+
+    # Hide x and y axis tick labels
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
 
     plt.tight_layout()
 
-    if save:
-        if not anonymize:
-            plt.savefig(os.path.join(out_dir, f"{title}.png"))
-        else:
-            current_time = time.strftime("%Y%m%d-%H%M%S")
-            plt.savefig(os.path.join(out_dir, f"ECG_{current_time}.png"))
-    else:
-        plt.show()
-
-    fig.patch.set_alpha(0)
-
     img_buffer = io.BytesIO()
-    plt.savefig(img_buffer, format="png", transparent=True)
+    plt.savefig(img_buffer, format="png", transparent=False)
     img_buffer.seek(0)
 
     img = Image.open(img_buffer)
 
-    plt.close()
+    # Rescale image to the specified width
+    aspect_ratio = img.height / img.width
+    new_height = int(width * aspect_ratio)
+    img = img.resize((width, new_height), Image.LANCZOS)
 
-    return img
+    # Save the rescaled image with the new width
+    if save:
+        if not anonymize:
+            title = os.path.basename(xml_path)
+            save_path = os.path.join(out_dir, f"{title}.png")
+        else:
+            current_time = time.strftime("%Y%m%d-%H%M%S")
+            save_path = os.path.join(out_dir, f"ECG_{current_time}.png")
+
+        img.save(save_path, dpi=(240, 240))
+    else:
+        img.show()
+
+    plt.close(fig)
+    if os.path.exists(npy_path):
+        os.remove(npy_path)
+    return {"path": npy_path, "xml_path": xml_path}
 
 
 if __name__ == "__main__":

@@ -258,8 +258,10 @@ class tinyxml2df:
 
         if not os.path.exists(self.out_path):
             os.makedirs(self.out_path)
-        if not os.path.exists(os.path.join(self.out_path, "ecg_npy/")):
-            os.makedirs(os.path.join(self.out_path, "ecg_npy/"))
+        try:
+            os.makedirs(os.path.join(self.out_path, "ecg_npy/"), exist_ok=True)
+        except FileExistsError:
+            pass
 
         # Check if self.path is a DataFrame or string (path)
         if isinstance(self.path, pd.DataFrame):
