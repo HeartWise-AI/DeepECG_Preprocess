@@ -5,9 +5,8 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
-from PIL import Image
-
 from CLI_xml2df import tinyxml2df
+from PIL import Image
 
 
 class XMLtoNumpyConverter:
@@ -65,7 +64,7 @@ def plot_xml_files(xml_files, save=False):
         xml_files = [xml_files]  # Convert to list if only one file is provided
 
     for xml_path in xml_files:
-        print(f"Processing: {xml_path}")
+        # print(f"Processing: {xml_path}")
         converter = XMLtoNumpyConverter(xml_path)
         result = converter.load_and_convert()
 

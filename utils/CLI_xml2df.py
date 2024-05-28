@@ -268,9 +268,9 @@ class tinyxml2df:
             print("path is a dataframe")
             file_paths = self.path["path"].tolist()
         elif isinstance(self.path, str):
-            print(self.path)
+            # print(self.path)
             if os.path.isdir(self.path):
-                print("path is a directory")
+                # print("path is a directory")
                 file_paths = [
                     os.path.join(self.path, f)
                     for f in os.listdir(self.path)
@@ -278,7 +278,7 @@ class tinyxml2df:
                 ]
             elif os.path.isfile(self.path):
                 if self.path.endswith(".xml"):
-                    print("path is an XML file")
+                    # print("path is an XML file")
                     file_paths = [self.path]
                 else:
                     raise ValueError("File must be an XML file")
@@ -289,9 +289,7 @@ class tinyxml2df:
         else:
             raise ValueError("Invalid input type for in_path. Expected str or DataFrame.")
 
-        for file_xml in tqdm(
-            file_paths, total=len(file_paths), desc="Transforming xml files into dict"
-        ):
+        for file_xml in file_paths:
             with open(file_xml) as xml:  # file_xml already has the full path
                 path_list.append(file_xml)  # Directly append file_xml, which is the full path
 
@@ -301,7 +299,7 @@ class tinyxml2df:
                 npy_extracted = self.xml_to_np_array_file(
                     ECG_data_nested, os.path.join(self.out_path, "ecg_npy/")
                 )
-                print(npy_extracted)
+
                 try:
                     dx_txt = []
                     for line in ECG_data_nested["RestingECG"]["Diagnosis"]["DiagnosisStatement"]:

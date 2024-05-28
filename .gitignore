@@ -5,4 +5,4 @@ examples_Tahsin/
 exercise/
 lqts_ecg/
 *.csv
-
+ecg_png_parquet*
