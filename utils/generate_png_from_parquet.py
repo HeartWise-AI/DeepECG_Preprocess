@@ -7,9 +7,15 @@ from tqdm import tqdm
 
 
 def process_xml_path(args):
-    xml_path, out_dir = args
+    xml_path, out_dir, dataset = args
     result = plot_ecg_from_xml(
-        xml_path, out_dir=out_dir, title="", save=True, anonymize=False, width=1250
+        xml_path,
+        out_dir=out_dir,
+        title="",
+        save=True,
+        anonymize=False,
+        width=1250,
+        dataset=dataset,
     )
     return result
 
@@ -34,6 +40,13 @@ if __name__ == "__main__":
         default="ecg_png_parquet/",
         help="Directory to save the output PNG files",
     )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        choices=["MHI", "MIMICIV"],
+        default="MHI",
+        help="Dataset type (MHI or MIMICIV)",
+    )
 
     args = parser.parse_args()
 
@@ -44,7 +57,7 @@ if __name__ == "__main__":
             tqdm(
                 pool.imap(
                     process_xml_path,
-                    [(xml_path, args.outdir) for xml_path in df_parquet.xml_path],
+                    [(xml_path, args.outdir, args.dataset) for xml_path in df_parquet.xml_path],
                 ),
                 total=len(df_parquet.xml_path),
                 desc="Processing XML files",

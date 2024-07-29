@@ -16,4 +16,4 @@ Generate the lead data with the specified file
 
 ### Extract PNG files from parquet
 
-`python utils/generate_png_from_parquet.py /media/data1/muse_ge/ECG_ad202207_1453937_cat_labels_MUSE_vs_CARDIOLOGIST_v1.2.parquet --processes 8 --output_csv data/df_ecg_parquet.csv --outdir ecg_png_parquet3/`
+`python utils/generate_png_from_parquet.py /media/data1/muse_ge/ECG_ad202207_1453937_cat_labels_MUSE_vs_CARDIOLOGIST_v1.2.parquet --processes 8 --output_csv data/df_ecg_parquet.csv --outdir ecg_png_parquet3/ --dataset MHI`

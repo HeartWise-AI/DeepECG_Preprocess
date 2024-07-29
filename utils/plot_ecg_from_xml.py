@@ -72,7 +72,13 @@ def plot_xml_files(xml_files, save=False):
 
 
 def plot_ecg_from_xml(
-    xml_path, title="ECG Plot", out_dir="tmp/", save=False, anonymize=True, width=2500
+    xml_path,
+    title="ECG Plot",
+    out_dir="tmp/",
+    save=False,
+    anonymize=True,
+    width=2500,
+    dataset="MIMICIV",
 ):
     import io
     import os
@@ -89,35 +95,68 @@ def plot_ecg_from_xml(
     converter = tinyxml2df(xml_path, out_dir, verbose=True, save=False)
     npy_path = converter.read2flatten().npy_path[0]
 
-    lead_order = ["I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"]
+    if dataset == "MHI":
+        lead_order = [
+            "I",
+            "II",
+            "III",
+            "aVR",
+            "aVL",
+            "aVF",
+            "V1",
+            "V2",
+            "V3",
+            "V4",
+            "V5",
+            "V6",
+        ]
+        amplitude_factor = 4.88
+    elif dataset == "MIMICIV":  # MIMICIV
+        lead_order = [
+            "I",
+            "II",
+            "III",
+            "aVR",
+            "aVF",
+            "aVL",
+            "V1",
+            "V2",
+            "V3",
+            "V4",
+            "V5",
+            "V6",
+        ]
+        amplitude_factor = 1.2
     try:
-        lead_data = np.load(npy_path)
-        lead_dict = dict(zip(lead_order, np.swapaxes(np.squeeze(lead_data), 0, 1)))
+        lead_data = np.squeeze(np.load(npy_path))
+        if lead_data.shape[0] > 2500:
+            lead_data = lead_data[::2, :]  # Take every other sample
+        lead_dict = dict(zip(lead_order, np.swapaxes(lead_data, 0, 1)))
         activation = [0] * 5 + [10] * 50 + [0] * 5
 
         pannel_1_y = (
             [i + 50 for i in activation]
-            + [((i * 4.88) / 100) + 50 for i in lead_dict["I"][60:625]]
-            + [((i * 4.88) / 100) + 50 for i in lead_dict["aVR"][625:1250]]
-            + [((i * 4.88) / 100) + 50 for i in lead_dict["V1"][1250:1875]]
-            + [((i * 4.88) / 100) + 50 for i in lead_dict["V4"][1875:2500]]
+            + [((i * amplitude_factor) / 100) + 50 for i in lead_dict["I"][60:625]]
+            + [((i * amplitude_factor) / 100) + 50 for i in lead_dict["aVR"][625:1250]]
+            + [((i * amplitude_factor) / 100) + 50 for i in lead_dict["V1"][1250:1875]]
+            + [((i * amplitude_factor) / 100) + 50 for i in lead_dict["V4"][1875:2500]]
         )
         pannel_2_y = (
             [i + 15 for i in activation]
-            + [((i * 4.88) / 100) + 15 for i in lead_dict["II"][60:625]]
-            + [((i * 4.88) / 100) + 15 for i in lead_dict["aVL"][625:1250]]
-            + [((i * 4.88) / 100) + 15 for i in lead_dict["V2"][1250:1875]]
-            + [((i * 4.88) / 100) + 15 for i in lead_dict["V5"][1875:2500]]
+            + [((i * amplitude_factor) / 100) + 15 for i in lead_dict["II"][60:625]]
+            + [((i * amplitude_factor) / 100) + 15 for i in lead_dict["aVL"][625:1250]]
+            + [((i * amplitude_factor) / 100) + 15 for i in lead_dict["V2"][1250:1875]]
+            + [((i * amplitude_factor) / 100) + 15 for i in lead_dict["V5"][1875:2500]]
         )
         pannel_3_y = (
             [i - 15 for i in activation]
-            + [((i * 4.88) / 100) - 15 for i in lead_dict["III"][60:625]]
-            + [((i * 4.88) / 100) - 15 for i in lead_dict["aVF"][625:1250]]
-            + [((i * 4.88) / 100) - 15 for i in lead_dict["V3"][1250:1875]]
-            + [((i * 4.88) / 100) - 15 for i in lead_dict["V6"][1875:2500]]
+            + [((i * amplitude_factor) / 100) - 15 for i in lead_dict["III"][60:625]]
+            + [((i * amplitude_factor) / 100) - 15 for i in lead_dict["aVF"][625:1250]]
+            + [((i * amplitude_factor) / 100) - 15 for i in lead_dict["V3"][1250:1875]]
+            + [((i * amplitude_factor) / 100) - 15 for i in lead_dict["V6"][1875:2500]]
         )
         pannel_4_y = [i - 50 for i in activation] + [
-            ((i * 4.88) / 100) - 50 for i in lead_dict["II"][60::]
+            ((i * amplitude_factor) / 100) - 50 for i in lead_dict["II"][60::]
         ]
 
         fig, ax = plt.subplots(figsize=(40, 20))
@@ -227,8 +266,17 @@ if __name__ == "__main__":
         "--save", action="store_true", help="Save the plots instead of displaying"
     )
     parser.add_argument("--anonymize", action="store_true", help="Save the plots anonymously")
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="MHI",
+        choices=["MIMICIV", "MHI"],
+        help="Dataset type (MIMICIV or MHI)",
+    )
 
     args = parser.parse_args()
 
     for xml_path in args.xml_files:
-        plot_ecg_from_xml(xml_path, save=args.save, anonymize=args.anonymize)
+        plot_ecg_from_xml(
+            xml_path, save=args.save, anonymize=args.anonymize, dataset=args.dataset
+        )
