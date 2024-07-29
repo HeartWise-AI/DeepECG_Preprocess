@@ -38,6 +38,8 @@ def plot_from_parquet(
     save=False,
     anonymize=True,
     out_dir="/volume",
+    npy_path_column="npy_path",
+    dataset="MIMICIV",
 ):
     """
     Plots an EKG for a patient from a given parquet file. Supports two modes:
@@ -53,6 +55,8 @@ def plot_from_parquet(
     - save: Saves PNG if True (bool).
     - anonymize: Saves PNG anonymizeously if True (bool).
     - out_dir: Output directory for saving PNG (str).
+    - npy_path_column: Name of the column containing the npy file path (str).
+    - dataset: Dataset type, either "MHI" or "MIMICIV" (str).
     Returns:
     - A PNG file or displays the plot.
     """
@@ -81,7 +85,7 @@ def plot_from_parquet(
     if index != None:
         index = int(index)
         line = parquet.iloc[index]
-        npy_path = line["npy_path"]
+        npy_path = line[npy_path_column]
 
         if not anonymize:
             try:
@@ -145,91 +149,112 @@ def plot_from_parquet(
         subtitle_text = line[subtitle_column]
         title += f" - {subtitle_text}"
 
-    print(f"Plotting ID {patient_id} at {date} {time}")
-    lead_order = [
-        "I",
-        "II",
-        "III",
-        "aVR",
-        "aVL",
-        "aVF",
-        "V1",
-        "V2",
-        "V3",
-        "V4",
-        "V5",
-        "V6",
-    ]
+    # Set lead_order and amplitude_factor based on dataset
+    if dataset == "MHI":
+        lead_order = [
+            "I",
+            "II",
+            "III",
+            "aVR",
+            "aVL",
+            "aVF",
+            "V1",
+            "V2",
+            "V3",
+            "V4",
+            "V5",
+            "V6",
+        ]
+        amplitude_factor = 4.88
+    elif dataset == "MIMICIV":  # MIMICIV
+        lead_order = [
+            "I",
+            "II",
+            "III",
+            "aVR",
+            "aVF",
+            "aVL",
+            "V1",
+            "V2",
+            "V3",
+            "V4",
+            "V5",
+            "V6",
+        ]
+        amplitude_factor = 1.2
 
-    lead_dict = dict(zip(lead_order, np.swapaxes(np.squeeze(np.load(npy_path)), 0, 1)))
+    data = np.squeeze(np.load(npy_path))
+    if data.shape[0] > 2500:
+        data = data[::2, :]  # Take every other sample
+    lead_dict = dict(zip(lead_order, np.swapaxes(data, 0, 1)))
     activation = [0] * 5 + [10] * 50 + [0] * 5
     # generate the pannels
     pannel_1_y = (
         [i + 50 for i in activation]
-        + [((i * 4.88) / 100) + 50 for i in lead_dict["I"][60:625]]
-        + [((i * 4.88) / 100) + 50 for i in lead_dict["aVR"][625:1250]]
-        + [((i * 4.88) / 100) + 50 for i in lead_dict["V1"][1250:1875]]
-        + [((i * 4.88) / 100) + 50 for i in lead_dict["V4"][1875:2500]]
+        + [((i * amplitude_factor) / 100) + 50 for i in lead_dict["I"][60:625]]
+        + [((i * amplitude_factor) / 100) + 50 for i in lead_dict["aVR"][625:1250]]
+        + [((i * amplitude_factor) / 100) + 50 for i in lead_dict["V1"][1250:1875]]
+        + [((i * amplitude_factor) / 100) + 50 for i in lead_dict["V4"][1875:2500]]
     )
     pannel_2_y = (
         [i + 15 for i in activation]
-        + [((i * 4.88) / 100) + 15 for i in lead_dict["II"][60:625]]
-        + [((i * 4.88) / 100) + 15 for i in lead_dict["aVL"][625:1250]]
-        + [((i * 4.88) / 100) + 15 for i in lead_dict["V2"][1250:1875]]
-        + [((i * 4.88) / 100) + 15 for i in lead_dict["V5"][1875:2500]]
+        + [((i * amplitude_factor) / 100) + 15 for i in lead_dict["II"][60:625]]
+        + [((i * amplitude_factor) / 100) + 15 for i in lead_dict["aVL"][625:1250]]
+        + [((i * amplitude_factor) / 100) + 15 for i in lead_dict["V2"][1250:1875]]
+        + [((i * amplitude_factor) / 100) + 15 for i in lead_dict["V5"][1875:2500]]
     )
     pannel_3_y = (
         [i - 15 for i in activation]
-        + [((i * 4.88) / 100) - 15 for i in lead_dict["III"][60:625]]
-        + [((i * 4.88) / 100) - 15 for i in lead_dict["aVF"][625:1250]]
-        + [((i * 4.88) / 100) - 15 for i in lead_dict["V3"][1250:1875]]
-        + [((i * 4.88) / 100) - 15 for i in lead_dict["V6"][1875:2500]]
+        + [((i * amplitude_factor) / 100) - 15 for i in lead_dict["III"][60:625]]
+        + [((i * amplitude_factor) / 100) - 15 for i in lead_dict["aVF"][625:1250]]
+        + [((i * amplitude_factor) / 100) - 15 for i in lead_dict["V3"][1250:1875]]
+        + [((i * amplitude_factor) / 100) - 15 for i in lead_dict["V6"][1875:2500]]
     )
     pannel_4_y = [i - 50 for i in activation] + [
-        ((i * 4.88) / 100) - 50 for i in lead_dict["II"][60::]
+        ((i * amplitude_factor) / 100) - 50 for i in lead_dict["II"][60::]
     ]
 
     fig, ax = plt.subplots(figsize=(40, 20))
     ax.minorticks_on()
 
     ax.vlines(60, -10, -20, label="III", linewidth=4)
-    ax.text(60, -10, "III", fontsize=44)
+    ax.text(60, -10, "III", fontsize=44, color="black")
 
     ax.vlines(625, -10, -20, label="aVF", linewidth=4)
-    ax.text(625, -10, "aVF", fontsize=44)
+    ax.text(625, -10, "aVF", fontsize=44, color="black")
 
     ax.vlines(1250, -10, -20, label="V3", linewidth=4)
-    ax.text(1250, -10, "V3", fontsize=44)
+    ax.text(1250, -10, "V3", fontsize=44, color="black")
 
     ax.vlines(1875, -10, -20, label="V6", linewidth=4)
-    ax.text(1875, -10, "V6", fontsize=44)
+    ax.text(1875, -10, "V6", fontsize=44, color="black")
 
     ax.vlines(60, 10, 20, label="II", linewidth=4)
-    ax.text(60, 20, "II", fontsize=44)
+    ax.text(60, 20, "II", fontsize=44, color="black")
 
     ax.vlines(625, 10, 20, label="aVL", linewidth=4)
-    ax.text(625, 20, "aVL", fontsize=44)
+    ax.text(625, 20, "aVL", fontsize=44, color="black")
 
     ax.vlines(1250, 10, 20, label="V2", linewidth=4)
-    ax.text(1250, 20, "V2", fontsize=44)
+    ax.text(1250, 20, "V2", fontsize=44, color="black")
 
     ax.vlines(1875, 10, 20, label="V5", linewidth=4)
-    ax.text(1875, 20, "V5", fontsize=44)
+    ax.text(1875, 20, "V5", fontsize=44, color="black")
 
     ax.vlines(60, 45, 55, label="I", linewidth=4)
-    ax.text(60, 55, "I", fontsize=44)
+    ax.text(60, 55, "I", fontsize=44, color="black")
 
     ax.vlines(625, 45, 55, label="aVR", linewidth=4)
-    ax.text(625, 55, "aVR", fontsize=44)
+    ax.text(625, 55, "aVR", fontsize=44, color="black")
 
     ax.vlines(1250, 45, 55, label="V1", linewidth=4)
-    ax.text(1250, 55, "V1", fontsize=44)
+    ax.text(1250, 55, "V1", fontsize=44, color="black")
 
     ax.vlines(1875, 45, 55, label="V4", linewidth=4)
-    ax.text(1875, 55, "V4", fontsize=44)
+    ax.text(1875, 55, "V4", fontsize=44, color="black")
 
     ax.vlines(60, -55, -45, label="II", linewidth=4)
-    ax.text(60, -45, "II", fontsize=44)
+    ax.text(60, -45, "II", fontsize=44, color="black")
 
     ax.xaxis.set_major_locator(ticker.MultipleLocator(50))
     ax.xaxis.set_minor_locator(ticker.MultipleLocator(10))
@@ -251,6 +276,7 @@ def plot_from_parquet(
     ax.set_title(
         insert_newline(title, 150),
         fontsize=30,
+        color="black",
         bbox=dict(facecolor="white", edgecolor="white", boxstyle="round,pad=0.3"),
     )
 
