@@ -18,11 +18,13 @@ Generate the lead data with the specified file
 
 #### For MHI data
 
-`python main.py batch_dataframe /media/data1/muse_ge/ECG_ad202207_1453937_cat_labels_MUSE_vs_CARDIOLOGIST_v1.2.parquet --processes 8 --output_csv data/df_ecg_parquet.csv --out_dir ecg_png_parquet3/ --dataset MHI --anonymize --show_diagnosis`
+`python main.py batch_dataframe /media/data1/muse_ge/ECG_ad202207_1453937_cat_labels_MUSE_vs_CARDIOLOGIST_v1.2.parquet --processes 8 --output_csv data/df_ecg_parquet.csv --out_dir ecg_png_parquet3/ --dataset MHI --anonymize`
 
 #### For MIMICIV data
 
-`python main.py batch_dataframe /volume/DeepECG_Preprocess/utils/MIMICIV.csv --processes 8 --output_csv data/df_ecg_mimiciv.csv --out_dir ecg_png_mimiciv/ --dataset MIMICIV --diagnosis_column report --npy_path_column waveform_path --anonymize --show_diagnosis`
+`python main.py batch_dataframe /volume/DeepECG_Preprocess/utils/MIMICIV.csv --processes 8 --output_csv data/df_ecg_mimiciv.csv --out_dir ecg_png_mimiciv/ --dataset MIMICIV --diagnosis_column report --npy_path_column waveform_path --anonymize`
+
+This will extract PNG files for MIMICIV or MHI with proper formatting and no diagnosis.
 
 ### Plot individual ECG from different sources
 
