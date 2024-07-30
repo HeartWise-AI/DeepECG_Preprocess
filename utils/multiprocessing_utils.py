@@ -41,7 +41,7 @@ def process_ecg_from_dataframe(args):
         dataset=dataset,
         out_dir=out_dir,
     )
-    result = plotter.plot_ecg(save=True, anonymize=anonymize, show_diagnosis=show_diagnosis)
+    img, result = plotter.plot_ecg(save=True, anonymize=anonymize, show_diagnosis=show_diagnosis)
     return {"index": index, "result": result}
 
 

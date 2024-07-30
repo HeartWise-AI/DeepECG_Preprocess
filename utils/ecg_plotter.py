@@ -10,6 +10,10 @@ import pandas as pd
 from CLI_xml2df import tinyxml2df
 from PIL import Image
 
+# Set the default background color to white for all plots
+plt.rcParams["figure.facecolor"] = "white"
+plt.rcParams["axes.facecolor"] = "white"
+
 
 class ECGPlotter(ABC):
     def __init__(
@@ -84,6 +88,12 @@ class ECGPlotter(ABC):
                 diagnosis_text = f"{info.get('diagnosis', '')}" if show_diagnosis else ""
                 title = title + diagnosis_text
                 filename = f"{npy_filename}"
+        elif isinstance(self, XMLECGPlotter):
+            filename = os.path.basename(self.xml_path)
+        elif isinstance(self, NPYECGPlotter):
+            filename = os.path.basename(self.npy_path)
+        else:
+            raise ValueError("Unsupported ECGPlotter type")
 
         if lead_data.shape[0] > 2500:
             lead_data = lead_data[::2, :]  # Take every other sample
@@ -97,7 +107,7 @@ class ECGPlotter(ABC):
         plt.tight_layout()
         img, save_path = self._save_or_show_plot(fig, save, anonymize, filename)
         plt.close(fig)
-        return save_path
+        return img, save_path
 
     def _plot_leads(self, ax, lead_dict):
         activation = [0] * 5 + [10] * 50 + [0] * 5
@@ -157,7 +167,7 @@ class ECGPlotter(ABC):
 
     def _setup_plot(self):
         fig, ax = plt.subplots(figsize=(40, 20))
-        # Set the background color to white
+        # Ensure the background color is white
         fig.patch.set_facecolor("white")
         ax.set_facecolor("white")
         ax.minorticks_on()
@@ -190,7 +200,9 @@ class ECGPlotter(ABC):
 
     def _save_or_show_plot(self, fig, save, anonymize, title):
         img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format="png", transparent=False)
+        plt.savefig(
+            img_buffer, format="png", transparent=False, facecolor="white", edgecolor="none"
+        )
         img_buffer.seek(0)
         img = Image.open(img_buffer)
 
@@ -210,6 +222,7 @@ class ECGPlotter(ABC):
             img.save(save_path, dpi=(240, 240))
         else:
             img.show()
+            save_path = None
         return img, save_path
 
     @staticmethod

@@ -1,5 +1,6 @@
 import argparse
 
+from CLI_xml2df import tinyxml2df
 from ecg_plotter import create_ecg_plotter
 from multiprocessing_utils import batch_process_from_dataframe
 
